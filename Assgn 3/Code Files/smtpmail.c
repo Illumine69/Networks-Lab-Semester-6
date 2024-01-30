@@ -23,7 +23,7 @@ void recvData(int sockfd, char* buf,char* mailBuf, int size, int flags, char* ex
     while(n = recv(sockfd, buf, size, flags)){
         if(n == -1){
             perror(errMsg);
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         total_size += n;
         buf[n] = '\0';
@@ -31,7 +31,7 @@ void recvData(int sockfd, char* buf,char* mailBuf, int size, int flags, char* ex
         if(total_size >= strlen(expected)){
             if(strncmp(mailBuf + curMailBufSize, expected, strlen(expected)) != 0){
                 perror(errExpected);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
         }
         if(n > 0){
@@ -47,12 +47,12 @@ void recvData(int sockfd, char* buf,char* mailBuf, int size, int flags, char* ex
 void sendData(int sockfd, char* buf, int flags, char* errMsg, char* errExpected){
     if(send(sockfd, buf, strlen(buf), flags) == -1){
         if(errno == EPIPE){
-            printf(errExpected);
-            exit(1);
+            perror(errExpected);
+            exit(EXIT_FAILURE);
         }
         else{
             perror(errMsg);
-            exit(1);
+            exit(EXIT_FAILURE);
         }
     }
     printf("S: %s",buf);
@@ -60,8 +60,8 @@ void sendData(int sockfd, char* buf, int flags, char* errMsg, char* errExpected)
 
 int main(int argc, char* argv[]){
     if(argc != 2){
-        printf("Usage: ./smtpmail <my_port>\n");
-        exit(0);
+        perror("Usage: ./smtpmail <my_port>\n");
+        exit(1);
     }
 
     int sockfd, newsockfd;
@@ -71,7 +71,7 @@ int main(int argc, char* argv[]){
     // Opening a socket
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
         perror("Cannot create socket\n");
-        exit(0);
+        exit(1);
     }
 
     serv_addr.sin_family = AF_INET;
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]){
     // Binding the socket to the server address
     if(bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0){
         perror("Unable to bind local address\n");
-        exit(0);
+        exit(1);
     }
 
     // Listening for upto 5 connections
@@ -99,7 +99,7 @@ int main(int argc, char* argv[]){
 
         if(newsockfd < 0){
             perror("Unable to accept connection\n");
-            exit(0);
+            exit(EXIT_FAILURE);
         }
 
         if(fork() == 0){        // Child Process
