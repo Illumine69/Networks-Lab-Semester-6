@@ -29,25 +29,32 @@ int sock;
 void getcrlf(char line[], char buff[])
 {
     int n;
+    int lineptr=0;
+    int done=0;
 
     n = recv(sock, buff, MAX, 0);
     while (1)
     {
         for (int i = 0; i < n; i++)
         {
-            if (buff[i] == '\r' && (buff[i + 1] == '\n'))
+            if (((buff[i] == '\r') && (buff[i + 1] == '\n'))||(line[lineptr-1]=='\r'&&buff[0]=='\n'))
             {
                 buff[i] = '\0';
                 strcpy(line, buff);
+                done=1;
 
                 break;
             }
-            else
-            {
-                strcpy(line, buff);
-                n = recv(sock, buff, MAX, 0);
-            }
+            
+          
         }
+        if(done)break;
+        strcpy(line+lineptr, buff);
+                lineptr+=n;
+                n = recv(sock, buff, MAX, 0);
+
+        
+
     }
     return;
 }
@@ -243,6 +250,7 @@ int main(int argc, char *argv[])
                     buff[buffptr + 2] = '.';
                     buff[buffptr + 3] = '\r';
                     buff[buffptr + 4] = '\n';
+                    buffptr+=5;
                     break;
                 }
                 else {
@@ -338,11 +346,33 @@ int main(int argc, char *argv[])
                 printf("Error Server Sent: %s\n", line);
                 continue;
             }
+            send(sock, buff, buffptr, 0);
+             getcrlf(line, buff);
+            b = strtok(line, " ");
+            status = atoi(b);
+            if(status!=250)
+            {
+                printf("Error Server Sent: %s\n", line);
+                continue;
+            }
+            sprintf(buff,"QUIT");
+             len = strlen(buff);
+              buff[len] = '\r';
+            buff[len + 1] = '\n';
+            send(sock, buff, len + 2, 0);
+            getcrlf(line, buff);
+            b = strtok(line, " ");
+             status = atoi(b);
+            if(status!=221)
+            {
+                printf("Error Server Sent: %s\n", line);
+                continue;
+            }
+            printf("Mail Sent Successfully\n");
+            close(sock);
 
 
 
-
-            
 
         }
 
