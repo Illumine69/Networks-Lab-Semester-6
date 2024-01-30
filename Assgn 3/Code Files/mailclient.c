@@ -1,7 +1,9 @@
-// Name : Voddula Karthik Reddy
-// Roll No : 21CS30058
-// File Name : file_cliect.c
-// Assignment : 2
+/*
+Name: Sanskar Mittal, Karthik Reddy
+Roll number: 21CS10057, 21CS30058
+Assignment 3: Mail Server and Client
+File: mailclient.c
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
