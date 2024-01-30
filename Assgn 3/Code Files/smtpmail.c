@@ -289,25 +289,56 @@ int main(int argc, char* argv[]){
                     perror("Error in receiving message at RECEIVING MAIL\n");
                     exit(0);
                 }
-                total_len += n;
                 buf[n] = '\0';
-                if(mainBuf[total_len - 1] == '\r' && buf[0] == '\n'){
+                if((total_len  > 0) && (mainBuf[total_len - 1] == '\r') && (buf[0] == '\n')){
                     mainBuf[total_len - 1] = '\n';
                     buf[0] = '\0';
                 }
-                for(int i=0;i < n-1;i++){
+                for(int i=0;i < n;i++){
                     if(buf[i] == '\r' && buf[i+1] == '\n'){
                         buf[i] = '\n';
                         buf[i+1] = '\0';
                     }
-                    if(buf[i] == '\0' && buf[i+1] == '.' && buf[i+2])
                 }
                 strncpy(mainBuf, buf, n);
+                total_len += n;
+                if( total_len > 5 
+                    && mainBuf[total_len - 1] == '\0'
+                    && mainBuf[total_len - 2] == '\n'
+                    && mainBuf[total_len - 3] == '.'
+                    && mainBuf[total_len - 4] == '\0'
+                    && mainBuf[total_len - 5] == '\n'){
+                    break;
+                }
                 memset(buf, '\0', MAX);
             }
             write(mymailbox, mainBuf, total_len);
 
+            // Acknowledge mail and send OK
+            memset(buf, '\0', MAX);
+            sprintf(buf, "250 OK Message accepted for delivery\r\n");
+            sendData(newsockfd, buf, 0, "Client closed connection at ACKNOWLEDGING MAIL\n", "Error in sending message at ACKNOWLEDGING MAIL\n");
 
+            // Sender close connection
+            memset(buf, '\0', MAX);
+            recvData(newsockfd, buf, mainBuf, MAX, 0, "QUIT", "Error in receiving message at CLOSING CONNECTION\n", "QUIT not received\n");
+
+            // Close connection
+            memset(buf, '\0', MAX);
+            sprintf(buf, "221 iitkgp.edu closing connection\r\n");
+            sendData(newsockfd, buf, 0, "Client closed connection at CLOSING CONNECTION\n", "Error in sending message at CLOSING CONNECTION\n");
+
+            close(newsockfd);
+            free(buf);
+            free(mainBuf);
+            free(mailFrom);
+            free(mailTo);
+            free(userFileName);
+            exit(0);
         }
+        close(newsockfd);
     }
+
+    close(sockfd);
+    return 0;
 }
