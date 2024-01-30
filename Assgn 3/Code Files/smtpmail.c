@@ -329,6 +329,7 @@ int main(int argc, char* argv[]){
             sendData(newsockfd, buf, 0, "Client closed connection at CLOSING CONNECTION\n", "Error in sending message at CLOSING CONNECTION\n");
 
             close(newsockfd);
+            printf("Client closed connection\n");
             free(buf);
             free(mainBuf);
             free(mailFrom);
