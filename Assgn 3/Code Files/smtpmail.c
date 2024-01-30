@@ -17,31 +17,34 @@ File: smtpmail.c
 #include <errno.h>
 #define MAX 5000
 
-void recvData(int sockfd, char* buf,char* mailBuf, int size, int flags, char* expected, char* errMsg, char* errExpected){
-    int n, total_size = 0,curMailBufSize = strlen(mailBuf);
+void recvData(int sockfd, char* buf, char* mainBuf, int size, int flags, char* expected, char* errMsg, char* errExpected){
+    int n;
+    // char* mainBuf = (char*)malloc((MAX + 1)*sizeof(char));
+    memset(mainBuf, '\0', MAX);
     memset(buf, '\0', MAX);
+
     while(n = recv(sockfd, buf, size, flags)){
         if(n == -1){
             perror(errMsg);
             exit(EXIT_FAILURE);
         }
-        total_size += n;
-        buf[n] = '\0';
-        strncat(mailBuf, buf, n);
-        if(total_size >= strlen(expected)){
-            if(strncmp(mailBuf + curMailBufSize, expected, strlen(expected)) != 0){
+    
+        buf[n] = '\0';      // for strlen feature    
+        strncat(mainBuf, buf, n);
+        if(strlen(mainBuf) >= strlen(expected)){
+            if(strncmp(mainBuf, expected, strlen(expected)) != 0){
                 perror(errExpected);
                 exit(EXIT_FAILURE);
             }
         }
-        if(n > 0){
-            if(mailBuf[strlen(mailBuf) - 1] == '\n' && mailBuf[strlen(mailBuf) - 2] == '\r'){
+        if(strlen(mainBuf) > 1){
+            if(mainBuf[strlen(mainBuf) - 1] == '\n' && mainBuf[strlen(mainBuf) - 2] == '\r'){
                 break;
             }
         }
         memset(buf, '\0', MAX);
     }
-    printf("C: %s",mailBuf+curMailBufSize);
+    printf("C: %s",mainBuf);
 }
 
 void sendData(int sockfd, char* buf, int flags, char* errMsg, char* errExpected){
@@ -107,12 +110,12 @@ int main(int argc, char* argv[]){
             close(sockfd);      // Close the listening socket
             
             // Char buff used for sending and receiving messages
-            char* buf = (char*)malloc((MAX + 1)*sizeof(char));
-            char* mailBuf = (char*)malloc((MAX + 1)*sizeof(char));
+            char* buf = (char*)malloc((MAX + 10)*sizeof(char));
+            char* mainBuf = (char*)malloc((MAX + 10)*sizeof(char));
             char* mailFrom = (char*)malloc((MAX)*sizeof(char));
             char* mailTo = (char*)malloc((MAX)*sizeof(char));
 
-            memset(mailBuf, '\0', MAX);
+            memset(mainBuf, '\0', MAX);
             memset(buf, '\0', MAX);
 
             // Send SERVICE READY
@@ -131,7 +134,7 @@ int main(int argc, char* argv[]){
             // printf("S: %s",buf);
 
             // Receive HELO
-            recvData(newsockfd, buf, mailBuf, MAX, 0, "HELO", "Error in receiving message at RECEIVING HELO\n", "HELO not received\n");
+            recvData(newsockfd, buf, mainBuf, MAX, 0, "HELO", "Error in receiving message at RECEIVING HELO\n", "HELO not received\n");
             // memset(buf, '\0', MAX);
             // if(recv(newsockfd, buf, MAX, 0) == -1){
             //     perror("Error in receiving message at RECEIVING HELO\n");
@@ -160,7 +163,7 @@ int main(int argc, char* argv[]){
             // printf("S: %s",buf);
 
             // identify sending user
-            recvData(newsockfd, buf, mailBuf, MAX, 0, "MAIL FROM:", "Error in receiving message at IDENTIFYING USER\n", "MAIL FROM not received\n");
+            recvData(newsockfd, buf, mainBuf, MAX, 0, "MAIL FROM:", "Error in receiving message at IDENTIFYING USER\n", "MAIL FROM not received\n");
             // memset(buf, '\0', MAX);
             // if(recv(newsockfd, buf, MAX, 0) == -1){
             //     perror("Error in receiving message at IDENTIFYING USER\n");
@@ -171,16 +174,16 @@ int main(int argc, char* argv[]){
             //     exit(0);
             // }
             // printf("C: %s",buf);
-            // for(int i=0;i < strlen(buf);++i){
-            //     if(buf[i] == '<'){
-            //         int j = i+1;
-            //         while(buf[j] != '>'){
-            //             mailFrom[j-i-1] = buf[j];
-            //             ++j;
-            //         }
-            //         break;
-            //     }
-            // }
+            for(int i=0;i < strlen(mainBuf);++i){
+                if(mainBuf[i] == '<'){
+                    int j = i+1;
+                    while(mainBuf[j] != '@'){
+                        mailFrom[j-i-1] = mainBuf[j];
+                        ++j;
+                    }
+                    break;
+                }
+            }
 
             // Acknowledge MAIL FROM and send OK
             memset(buf, '\0', MAX);
@@ -199,8 +202,7 @@ int main(int argc, char* argv[]){
             // printf("S: %s",buf);
 
             // identify target user
-            int curMailBufSize = strlen(mailBuf);
-            recvData(newsockfd, buf, mailBuf, MAX, 0, "RCPT TO:", "Error in receiving message at IDENTIFYING TARGET USER\n", "RCPT TO not received\n");
+            recvData(newsockfd, buf, mainBuf, MAX, 0, "RCPT TO:", "Error in receiving message at IDENTIFYING TARGET USER\n", "RCPT TO not received\n");
             // memset(buf, '\0', MAX);
             // if(recv(newsockfd, buf, MAX, 0) == -1){
             //     perror("Error in receiving message at IDENTIFYING TARGET USER\n");
@@ -211,27 +213,17 @@ int main(int argc, char* argv[]){
             //     exit(0);
             // }
             // printf("C: %s",buf);
-            for(int i=curMailBufSize;i < strlen(mailBuf);++i){
-                if(mailBuf[i] == '<'){
+
+            for(int i=0;i < strlen(mainBuf);++i){
+                if(mainBuf[i] == '<'){
                     int j = i+1;
-                    while(mailBuf[j] != '>'){
-                        mailTo[j-i-1] = mailBuf[j];
+                    while(mainBuf[j] != '@'){
+                        mailTo[j-i-1] = mainBuf[j];
                         ++j;
                     }
                     break;
                 }
             }
-
-            // for(int i=0;i < strlen(buf);++i){
-            //     if(buf[i] == '<'){
-            //         int j = i+1;
-            //         while(buf[j] != '>'){
-            //             mailTo[j-i-1] = buf[j];
-            //             ++j;
-            //         }
-            //         break;
-            //     }
-            // }
 
             // Acknowledge RCPT TO and send OK
             memset(buf, '\0', MAX);
@@ -250,7 +242,7 @@ int main(int argc, char* argv[]){
             // printf("S: %s",buf);
 
             // Client send "DATA"
-            recvData(newsockfd, buf, mailBuf, MAX, 0, "DATA", "Error in receiving message at RECEIVING DATA\n", "DATA not received\n");
+            recvData(newsockfd, buf, mainBuf, MAX, 0, "DATA", "Error in receiving message at RECEIVING DATA\n", "DATA not received\n");
             // memset(buf, '\0', MAX);
             // if(recv(newsockfd, buf, MAX, 0) == -1){
             //     perror("Error in receiving message at RECEIVING DATA\n");
@@ -279,19 +271,41 @@ int main(int argc, char* argv[]){
             // printf("S: %s",buf);
 
             // Open file descriptor for storing mail
-
-
+            char* userFileName = (char*)malloc((MAX + 10)*sizeof(char));
+            memset(userFileName, '\0', MAX);
+            sprintf(userFileName, "%s/mymailbox", mailTo);
+            int mymailbox = open(userFileName, O_RDWR | O_CREAT);
+            if(mymailbox < 0){
+                perror("Unable to create file\n");
+                exit(1);
+            }
 
             // Receive mail
             memset(buf, '\0', MAX);
-            int n;
+            memset(mainBuf, '\0', MAX);
+            int n, total_len = 0;
             while(n = recv(newsockfd, buf, MAX, 0)){
                 if(n == -1){
                     perror("Error in receiving message at RECEIVING MAIL\n");
                     exit(0);
                 }
-                
+                total_len += n;
+                buf[n] = '\0';
+                if(mainBuf[total_len - 1] == '\r' && buf[0] == '\n'){
+                    mainBuf[total_len - 1] = '\n';
+                    buf[0] = '\0';
+                }
+                for(int i=0;i < n-1;i++){
+                    if(buf[i] == '\r' && buf[i+1] == '\n'){
+                        buf[i] = '\n';
+                        buf[i+1] = '\0';
+                    }
+                    if(buf[i] == '\0' && buf[i+1] == '.' && buf[i+2])
+                }
+                strncpy(mainBuf, buf, n);
+                memset(buf, '\0', MAX);
             }
+            write(mymailbox, mainBuf, total_len);
 
 
         }
