@@ -105,7 +105,6 @@ int main(int argc, char* argv[]){
             perror("Unable to accept connection\n");
             exit(EXIT_FAILURE);
         }
-        // printf("%d", cli_addr.sin_port);
 
         if(fork() == 0){        // Child Process
 
@@ -127,61 +126,20 @@ int main(int argc, char* argv[]){
             memset(recvTime, '\0', 100);
 
             // Send SERVICE READY
-            sprintf(buf, "220 <iitkgp.edu> Service ready\r\n");
+            sprintf(buf, "\n220 <iitkgp.edu> Service ready\r\n");
             sendData(newsockfd, buf, 0, "Client closed connection at SERVICE READY\n", "Error in sending message at SERVICE READY\n");
-            // if(send(newsockfd, buf, strlen(buf), 0) == -1){
-            //     if(errno == EPIPE){
-            //         printf("Client closed connection at SERVICE READY\n");
-            //         exit(0);
-            //     }
-            //     else{
-            //         perror("Error in sending message at SERVICE READY\n");
-            //         exit(0);
-            //     }
-            // }
-            // printf("S: %s",buf);
 
             // Receive HELO
             recvData(newsockfd, buf, mainBuf, MAX, 0, "HELO", "Error in receiving message at RECEIVING HELO\n", "HELO not received\n");
-            // memset(buf, '\0', MAX);
-            // if(recv(newsockfd, buf, MAX, 0) == -1){
-            //     perror("Error in receiving message at RECEIVING HELO\n");
-            //     exit(0);
-            // }
-            // if(strncmp(buf, "HELO", 4) != 0){
-            //     perror("HELO not received\n");
-            //     exit(0);
-            // }
-            // printf("C: %s",buf);
 
             // Acknowledge HELO and send OK
             memset(buf, '\0', MAX);
             sprintf(buf, "250 OK Hello iitkgp.edu\r\n");
             sendData(newsockfd, buf, 0, "Client closed connection at ACKNOWLEDGING HELO\n", "Error in sending message at ACKNOWLEDGING HELO\n");
-            // if(send(newsockfd, buf, strlen(buf), 0) == -1){
-            //     if(errno == EPIPE){
-            //         printf("Client closed connection at ACKNOWLEDGING HELO\n");
-            //         exit(0);
-            //     }
-            //     else{
-            //         perror("Error in sending message at ACKNOWLEDGING HELO\n");
-            //         exit(0);
-            //     }
-            // }
-            // printf("S: %s",buf);
 
             // identify sending user
             recvData(newsockfd, buf, mainBuf, MAX, 0, "MAIL FROM:", "Error in receiving message at IDENTIFYING USER\n", "MAIL FROM not received\n");
-            // memset(buf, '\0', MAX);
-            // if(recv(newsockfd, buf, MAX, 0) == -1){
-            //     perror("Error in receiving message at IDENTIFYING USER\n");
-            //     exit(0);
-            // }
-            // if(strncmp(buf, "MAIL FROM:", 10) != 0){
-            //     perror("MAIL FROM not received\n");
-            //     exit(0);
-            // }
-            // printf("C: %s",buf);
+    
             for(int i=0;i < strlen(mainBuf);++i){
                 if(mainBuf[i] == '<'){
                     int j = i+1;
@@ -197,30 +155,9 @@ int main(int argc, char* argv[]){
             memset(buf, '\0', MAX);
             sprintf(buf, "250 <%s@iitkgp.edu>... Sender ok\r\n", mailFrom);
             sendData(newsockfd, buf, 0, "Client closed connection at ACKNOWLEDGING SENDING USER\n", "Error in sending message at ACKNOWLEDGING SENDING USER\n");
-            // if(send(newsockfd, buf, strlen(buf), 0) == -1){
-            //     if(errno == EPIPE){
-            //         printf("Client closed connection at ACKNOWLEDGING SENDING USER\n");
-            //         exit(0);
-            //     }
-            //     else{
-            //         perror("Error in sending message at ACKNOWLEDGING SENDING USER\n");
-            //         exit(0);
-            //     }
-            // }
-            // printf("S: %s",buf);
 
             // identify target user
             recvData(newsockfd, buf, mainBuf, MAX, 0, "RCPT TO:", "Error in receiving message at IDENTIFYING TARGET USER\n", "RCPT TO not received\n");
-            // memset(buf, '\0', MAX);
-            // if(recv(newsockfd, buf, MAX, 0) == -1){
-            //     perror("Error in receiving message at IDENTIFYING TARGET USER\n");
-            //     exit(0);
-            // }
-            // if(strncmp(buf, "RCPT TO:", 8) != 0){
-            //     perror("RCPT TO not received\n");
-            //     exit(0);
-            // }
-            // printf("C: %s",buf);
 
             for(int i=0;i < strlen(mainBuf);++i){
                 if(mainBuf[i] == '<'){
@@ -237,46 +174,14 @@ int main(int argc, char* argv[]){
             memset(buf, '\0', MAX);
             sprintf(buf, "250 root... Recipient ok\r\n");
             sendData(newsockfd, buf, 0, "Client closed connection at ACKNOWLEDGING TARGET USER\n", "Error in sending message at ACKNOWLEDGING TARGET USER\n");
-            // if(send(newsockfd, buf, strlen(buf), 0) == -1){
-            //     if(errno == EPIPE){
-            //         printf("Client closed connection at ACKNOWLEDGING TARGET USER\n");
-            //         exit(0);
-            //     }
-            //     else{
-            //         perror("Error in sending message at ACKNOWLEDGING TARGET USER\n");
-            //         exit(0);
-            //     }
-            // }
-            // printf("S: %s",buf);
 
             // Client send "DATA"
             recvData(newsockfd, buf, mainBuf, MAX, 0, "DATA", "Error in receiving message at RECEIVING DATA\n", "DATA not received\n");
-            // memset(buf, '\0', MAX);
-            // if(recv(newsockfd, buf, MAX, 0) == -1){
-            //     perror("Error in receiving message at RECEIVING DATA\n");
-            //     exit(0);
-            // }
-            // if(strncmp(buf, "DATA", 4) != 0){
-            //     perror("DATA not received\n");
-            //     exit(0);
-            // }
-            // printf("C: %s",buf);
 
             // Acknowledge DATA and send OK
             memset(buf, '\0', MAX);
             sprintf(buf, "354 Enter mail, end with \".\" on a line by itself\r\n");
             sendData(newsockfd, buf, 0, "Client closed connection at ACKNOWLEDGING DATA\n", "Error in sending message at ACKNOWLEDGING DATA\n");
-            // if(send(newsockfd, buf, strlen(buf), 0) == -1){
-            //     if(errno == EPIPE){
-            //         printf("Client closed connection at ACKNOWLEDGING DATA\n");
-            //         exit(0);
-            //     }
-            //     else{
-            //         perror("Error in sending message at ACKNOWLEDGING DATA\n");
-            //         exit(0);
-            //     }
-            // }
-            // printf("S: %s",buf);
 
             // Open file descriptor for storing mail
             char* userFileName = (char*)malloc((MAX + 10)*sizeof(char));
