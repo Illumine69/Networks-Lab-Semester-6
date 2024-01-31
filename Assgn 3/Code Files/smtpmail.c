@@ -20,7 +20,7 @@ File: smtpmail.c
 
 void recvData(int sockfd, char* buf, char* mainBuf, int size, int flags, char* expected, char* errMsg, char* errExpected){
     int n;
-    // char* mainBuf = (char*)malloc((MAX + 1)*sizeof(char));
+    
     memset(mainBuf, '\0', MAX);
     memset(buf, '\0', MAX);
 
@@ -32,6 +32,7 @@ void recvData(int sockfd, char* buf, char* mainBuf, int size, int flags, char* e
     
         buf[n] = '\0';      // for strlen feature    
         strncat(mainBuf, buf, n);
+
         if(strlen(mainBuf) >= strlen(expected)){
             if(strncmp(mainBuf, expected, strlen(expected)) != 0){
                 perror(errExpected);
