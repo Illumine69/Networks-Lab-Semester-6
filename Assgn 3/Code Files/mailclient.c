@@ -46,7 +46,7 @@ void getcrlf(char line[], char buff[])
                     strcpy(line, buff);
                     //printf("line:%s ",line);
                     done=1;
-                    printf("breaking\n");
+                   // printf("breaking\n");
 
                     break;
                 }
@@ -111,9 +111,9 @@ int validsyntax(char buff[], char From[], int * buffptr,int subj,char sender [],
                    // printf("yoooo\n");
                     // buff[len]='\0';
                     buff[len + *buffptr-1] = '\r';
-                    buff[len + 1 + *buffptr] = '\n';
-                    buff[len + 2 + *buffptr+1] = '\0';
-                    *buffptr = *buffptr+len + 1;
+                    buff[len  + *buffptr] = '\n';
+                    buff[len + *buffptr + 1] = '\0';
+                    *buffptr = *buffptr+len;
 
                     // send(sock, buff, len + 2, 0);
                 }
@@ -158,6 +158,7 @@ int main(int argc, char *argv[])
     int n;
     int len;
     int status;
+    char buff1[5000];
 
     char line[MAX + 3];
     if (argc != 4)
@@ -219,19 +220,29 @@ int main(int argc, char *argv[])
             // here
             int flag = 1;
             int at_therate = 0;
+            int buffptr_copy;
 //
 
             while (1)
             {
                 flag = 1;
                 at_therate = 0;
+
+                
+               // printf("buff : %s\n",buff);
                  gets(buff + buffptr);
-                  len = strlen(buff + buffptr) ;
-                 // printf("yee : %s\n",buff+buffptr);
+                len = strlen(buff + buffptr) ;
+                 printf("yee : %s\n",buff+buffptr);
                 
                 buff[len+buffptr]='\n';
                 buff[len+buffptr+1]='\0';
-                //printf("buffptr : %d",buffptr);
+                printf("buffptr : %d\n",buffptr);
+                //printf("buff\n");
+                // for(int i=0;i<buffptr;i++)
+                // {
+                //     printf("%c",buff[i]);
+                // }
+                printf("\n");
                
                // printgf("Len:%d",len);
                // printf("sdfdf:%d\n", len);
@@ -275,6 +286,7 @@ int main(int argc, char *argv[])
                 // what if it breaks before five lines
 
                 //append crlf.crlf
+
                 if (strcmp(buff+buffptr, ".\n") == 0)
                 {
                     //printf("breaking\n");
@@ -285,10 +297,11 @@ int main(int argc, char *argv[])
                     buff[buffptr + 3] = '\r';
                     buff[buffptr + 4] = '\n';
                     buffptr+=5;
+                    buffptr_copy=buffptr;
                     break;
                 }
                 else if (i>2) {
-                    buffptr+=len;
+                    buffptr+=len+1;
 
                 }
 //
@@ -300,10 +313,15 @@ int main(int argc, char *argv[])
                 exit(0);
                 continue;
             }
+            printf("Mail entered:\n");
+            for(int i=0;i<buffptr;i++)
+            {
+                printf("%c",buff[i]);
+            }
             printf("waiting\n");
 
 
-            getcrlf(line, buff);
+            getcrlf(line, buff1);
             
 
            
@@ -331,12 +349,12 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            sprintf(buff, "HELO %s", domain);
-            len = strlen(buff);
-            buff[len] = '\r';
-            buff[len + 1] = '\n';
-            send(sock, buff, len + 2, 0);
-            getcrlf(line, buff);
+            sprintf(buff1, "HELO %s", domain);
+            len = strlen(buff1);
+            buff1[len] = '\r';
+            buff1[len + 1] = '\n';
+            send(sock, buff1, len + 2, 0);
+            getcrlf(line, buff1);
            
             char * b = strtok(line, " ");
             status = atoi(b);
@@ -352,13 +370,14 @@ int main(int argc, char *argv[])
             else {
                  printf("Server Sent: %s\n", line);
             }
+           // printf("Sender :%ssdffsdf",sender);
             
-            sprintf(buff,"MAIL FROM: <%s>",sender); 
-            len = strlen(buff);
-            buff[len] = '\r';
-            buff[len + 1] = '\n';
-            send(sock, buff, len + 2, 0);
-            getcrlf(line, buff);
+            sprintf(buff1,"MAIL FROM: <%s>",sender); 
+            len = strlen(buff1);
+            buff1[len] = '\r';
+            buff1[len + 1] = '\n';
+            send(sock, buff1, len + 2, 0);
+            getcrlf(line, buff1);
             b = strtok(line, " ");
             status = atoi(b);
             if(status!=250)
@@ -369,12 +388,12 @@ int main(int argc, char *argv[])
             else {
                  printf("Server Sent: %s\n", line);
             }
-            sprintf(buff,"RCPT TO: <%s>",receiver);
-            len = strlen(buff);
-            buff[len] = '\r';
-            buff[len + 1] = '\n';
-            send(sock, buff, len + 2, 0);
-            getcrlf(line, buff);
+            sprintf(buff1,"RCPT TO: <%s>",receiver);
+            len = strlen(buff1);
+            buff1[len] = '\r';
+            buff1[len + 1] = '\n';
+            send(sock, buff1, len + 2, 0);
+            getcrlf(line, buff1);
             b = strtok(line, " ");
             status = atoi(b);
             if(status!=250)
@@ -385,12 +404,12 @@ int main(int argc, char *argv[])
             else {
                  printf("Server Sent: %s\n", line);
             }
-            sprintf(buff,"DATA");
-             len = strlen(buff);
-            buff[len] = '\r';
-            buff[len + 1] = '\n';
-            send(sock, buff, len + 2, 0);
-            getcrlf(line, buff);
+            sprintf(buff1,"DATA");
+             len = strlen(buff1);
+            buff1[len] = '\r';
+            buff1[len + 1] = '\n';
+            send(sock, buff1, len + 2, 0);
+            getcrlf(line, buff1);
              b = strtok(line, " ");
               status = atoi(b);
             if(status!=354)
@@ -401,8 +420,17 @@ int main(int argc, char *argv[])
             else {
                  printf("Server Sent: %s\n", line);
             }
-            send(sock, buff, buffptr, 0);
-             getcrlf(line, buff);
+        buff[buffptr_copy+1]='\0';
+        printf("buffptr :%d\n",buffptr_copy);
+        for(int i=0;i<buffptr_copy;i++)
+        {
+            printf("%c",buff[i]);
+        }
+        printf("\n");
+       // printf("buff :%s\n",buff);
+            send(sock, buff, buffptr_copy, 0);
+            printf("sent\n");
+             getcrlf(line, buff1);
             b = strtok(line, " ");
             status = atoi(b);
             if(status!=250)
@@ -413,12 +441,12 @@ int main(int argc, char *argv[])
             else {
                  printf("Server Sent: %s\n", line);
             }
-            sprintf(buff,"QUIT");
-             len = strlen(buff);
-              buff[len] = '\r';
-            buff[len + 1] = '\n';
-            send(sock, buff, len + 2, 0);
-            getcrlf(line, buff);
+            sprintf(buff1,"QUIT");
+             len = strlen(buff1);
+              buff1[len] = '\r';
+            buff1[len + 1] = '\n';
+            send(sock, buff1, len + 2, 0);
+            getcrlf(line, buff1);
             b = strtok(line, " ");
              status = atoi(b);
             if(status!=221)
