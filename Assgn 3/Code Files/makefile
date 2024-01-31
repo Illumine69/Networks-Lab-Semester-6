@@ -1,3 +1,9 @@
+home:
+	gcc -Wall mailclient.c -o mailclient
+	./mailclient 10.147.225.68 24000 1221
+
+
+
 mailclient: mailclient.c
 	gcc -Wall mailclient.c -o mailclient
 	./mailclient 10.147.225.68 24000 1221
