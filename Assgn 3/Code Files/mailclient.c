@@ -320,20 +320,20 @@ int main(int argc, char *argv[])
             {
                 printf("%c",buff[i]);
             }
-            char* mailBuf = (char*)malloc((MAX+1)*sizeof(char));
-            memset(mailBuf, '\0', MAX+1);
-            strcpy(mailBuf, buff);
-            int mailBufSize = strlen(mailBuf);
-            printf("mailBufSize: %d\n", mailBufSize);
-            for(int i=0;i<mailBufSize;i++)
-            {
-                if(mailBuf[i] == '\r'){
-                    printf("\\r");
-                }
-                else{
-                    printf("%c",mailBuf[i]);
-                }
-            }
+            // char* mailBuf = (char*)malloc((MAX+1)*sizeof(char));
+            // memset(mailBuf, '\0', MAX+1);
+            // strcpy(mailBuf, buff);
+            // int mailBufSize = strlen(mailBuf);
+            // printf("mailBufSize: %d\n", mailBufSize);
+            // for(int i=0;i<mailBufSize;i++)
+            // {
+            //     if(mailBuf[i] == '\r'){
+            //         printf("\\r");
+            //     }
+            //     else{
+            //         printf("%c",mailBuf[i]);
+            //     }
+            // }
             printf("waiting\n");
 
 

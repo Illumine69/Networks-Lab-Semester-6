@@ -188,7 +188,7 @@ int main(int argc, char* argv[]){
             char* userFileName = (char*)malloc((MAX + 10)*sizeof(char));
             memset(userFileName, '\0', MAX);
             sprintf(userFileName, "%s/mymailbox", mailTo);
-            int mymailbox = open(userFileName, O_RDWR | O_CREAT);
+            int mymailbox = open(userFileName, O_RDWR | O_CREAT | O_APPEND, 0777);
             if(mymailbox < 0){
                 perror("Unable to create file\n");
                 exit(1);
