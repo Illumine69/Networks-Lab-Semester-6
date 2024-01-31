@@ -127,7 +127,7 @@ int main(int argc, char* argv[]){
             memset(recvTime, '\0', 100);
 
             // Send SERVICE READY
-            sprintf(buf, "\n220 <iitkgp.edu> Service ready\r\n");
+            sprintf(buf, "220 <iitkgp.edu> Service ready\r\n");
             sendData(newsockfd, buf, 0, "Client closed connection at SERVICE READY\n", "Error in sending message at SERVICE READY\n");
 
             // Receive HELO
@@ -241,6 +241,7 @@ int main(int argc, char* argv[]){
             // Cleaning mailBuf content to match with expected output
             int j = 0;
             int newlineLeft = 3;
+            printf("C: ");
             for(int i=0;i < total_len;i++){
                 if(newlineLeft == 0){
                     int len = strlen(recvTime);
@@ -250,9 +251,13 @@ int main(int argc, char* argv[]){
                 }
                 if(mainBuf[i] == '\0'){
                     newlineLeft--;
+                    if(i != (total_len - 1)){
+                        printf("C: ");
+                    }
                     continue;
                 }
                 mail[j++] = mainBuf[i];
+                printf("%c",mainBuf[i]);
             }
 
             write(mymailbox, mail, j);
