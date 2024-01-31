@@ -15,6 +15,7 @@ File: smtpmail.c
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <time.h>
 #define MAX 5000
 
 void recvData(int sockfd, char* buf, char* mainBuf, int size, int flags, char* expected, char* errMsg, char* errExpected){
@@ -104,6 +105,7 @@ int main(int argc, char* argv[]){
             perror("Unable to accept connection\n");
             exit(EXIT_FAILURE);
         }
+        // printf("%d", cli_addr.sin_port);
 
         if(fork() == 0){        // Child Process
 
@@ -114,9 +116,15 @@ int main(int argc, char* argv[]){
             char* mainBuf = (char*)malloc((MAX + 10)*sizeof(char));
             char* mailFrom = (char*)malloc((MAX)*sizeof(char));
             char* mailTo = (char*)malloc((MAX)*sizeof(char));
+            char* mail = (char*)malloc((MAX + 10)*sizeof(char));
+            char* recvTime = (char*)malloc((100)*sizeof(char));
 
             memset(mainBuf, '\0', MAX);
             memset(buf, '\0', MAX);
+            memset(mail, '\0', MAX);
+            memset(mailFrom, '\0', MAX);
+            memset(mailTo, '\0', MAX);
+            memset(recvTime, '\0', 100);
 
             // Send SERVICE READY
             sprintf(buf, "220 <iitkgp.edu> Service ready\r\n");
@@ -187,7 +195,7 @@ int main(int argc, char* argv[]){
 
             // Acknowledge MAIL FROM and send OK
             memset(buf, '\0', MAX);
-            sprintf(buf, "250 <%s>... Sender ok\r\n", mailFrom);
+            sprintf(buf, "250 <%s@iitkgp.edu>... Sender ok\r\n", mailFrom);
             sendData(newsockfd, buf, 0, "Client closed connection at ACKNOWLEDGING SENDING USER\n", "Error in sending message at ACKNOWLEDGING SENDING USER\n");
             // if(send(newsockfd, buf, strlen(buf), 0) == -1){
             //     if(errno == EPIPE){
@@ -312,7 +320,36 @@ int main(int argc, char* argv[]){
                 }
                 memset(buf, '\0', MAX);
             }
-            write(mymailbox, mainBuf, total_len);
+
+            // Get current time of the system
+            time_t currentTime;
+            time(&currentTime);
+
+            struct tm *localTime = localtime(&currentTime);
+
+            // Format the time as a string in "Date:Hour:Minute" format
+            char formattedTime[21];  
+            strftime(formattedTime, sizeof(formattedTime), "%d-%m-%Y : %H : %M", localTime);
+
+            sprintf(recvTime, "Received: %s\n", formattedTime);
+            // Cleaning mailBuf content to match with expected output
+            int j = 0;
+            int newlineLeft = 3;
+            for(int i=0;i < total_len;i++){
+                if(newlineLeft == 0){
+                    int len = strlen(recvTime);
+                    strncat(mail, recvTime, len);
+                    newlineLeft--;
+                    j += len;
+                }
+                if(mainBuf[i] == '\0'){
+                    newlineLeft--;
+                    continue;
+                }
+                mail[j++] = mainBuf[i];
+            }
+
+            write(mymailbox, mail, j);
 
             // Acknowledge mail and send OK
             memset(buf, '\0', MAX);

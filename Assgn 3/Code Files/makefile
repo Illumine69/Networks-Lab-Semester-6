@@ -1,6 +1,6 @@
 mailclient: mailclient.c
 	gcc -Wall mailclient.c -o mailclient
-	./mailclient 10.147.225.68 24000 1221
+	./mailclient 10.145.118.146 24000 1221
 
 smtpmail: smtpmail.c
 	gcc -Wall smtpmail.c -o smtpmail
