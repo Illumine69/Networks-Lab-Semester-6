@@ -289,7 +289,7 @@ int main(int argc, char *argv[])
                 printf("Error Server Sent: %s\n", line);
                 continue;
             }
-            sprintf(buff, "HELLO %s", domain);
+            sprintf(buff, "HELO %s", domain);
             len = strlen(buff);
             buff[len] = '\r';
             buff[len + 1] = '\n';
