@@ -65,6 +65,8 @@ int validsyntax(char buff[], char From[], int * buffptr,int subj,char sender [],
     
     //gets(buff + buffptr);
     len = strlen(buff + *buffptr) - 1;
+    //printf("len : %d",len);
+    //printf("buffptr : %s",buff+*buffptr);
     int flag = 1;
     int at_therate = 0;
     if(person==0)
@@ -202,6 +204,7 @@ int main(int argc, char *argv[])
                 flag = 1;
                 at_therate = 0;
                  gets(buff + buffptr);
+                 printf("%s\n",buff+buffptr);
                 len = strlen(buff + buffptr) - 1;
                 if (!i)
                 {
@@ -216,7 +219,7 @@ int main(int argc, char *argv[])
                 }
                 else if (i==1)
                 {
-                    if(!validsyntax(buff,From,&buffptr,0,sender,receiver,1)) {
+                    if(!validsyntax(buff,To,&buffptr,0,sender,receiver,1)) {
                       //  printf("Syntax error\n");
                         wrongsyntax=1;
                         break;
@@ -235,7 +238,7 @@ int main(int argc, char *argv[])
                    
                 }
                
-
+//
                 // first write all checks first.
 
                
@@ -244,6 +247,7 @@ int main(int argc, char *argv[])
                 //append crlf.crlf
                 if (strcmp(buff, ".") == 0)
                 {
+                    printf("breaking\n");
                     if(i<2)wrongsyntax=1;
                     buff[buffptr] = '\r';
                     buff[buffptr + 1] = '\n';
@@ -253,7 +257,7 @@ int main(int argc, char *argv[])
                     buffptr+=5;
                     break;
                 }
-                else {
+                else  {
                     buffptr+=len;
 
                 }
@@ -266,8 +270,9 @@ int main(int argc, char *argv[])
                 continue;
             }
             
-
+            printf("Sent\n");
             getcrlf(line, buff);
+            printf("waiting \n");
 
             char *a = strtok(line, " ");
             status = atoi(a);
@@ -320,6 +325,7 @@ int main(int argc, char *argv[])
                 printf("Error Server Sent: %s\n", line);
                 continue;
             }
+            printf("%s\n",receiver);
             sprintf(buff,"RCPT TO: <%s>",receiver);
             len = strlen(buff);
             buff[len] = '\r';
