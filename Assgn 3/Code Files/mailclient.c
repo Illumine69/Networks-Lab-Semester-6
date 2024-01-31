@@ -302,6 +302,10 @@ int main(int argc, char *argv[])
                 }
                 else if (i>2) {
                     buffptr+=len+1;
+                    buff[buffptr-1]='\r';
+                    buff[buffptr]='\n';
+                    buffptr++;
+
 
                 }
 //
