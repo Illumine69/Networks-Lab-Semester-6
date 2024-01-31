@@ -113,7 +113,7 @@ int validsyntax(char buff[], char From[], int * buffptr,int subj,char sender [],
                     buff[len + *buffptr-1] = '\r';
                     buff[len  + *buffptr] = '\n';
                     buff[len + *buffptr + 1] = '\0';
-                    *buffptr = *buffptr+len;
+                    *buffptr = *buffptr+len+1;
 
                     // send(sock, buff, len + 2, 0);
                 }
@@ -291,12 +291,10 @@ int main(int argc, char *argv[])
                 {
                     //printf("breaking\n");
                     if(i<2)wrongsyntax=1;
-                    buff[buffptr] = '\r';
-                    buff[buffptr + 1] = '\n';
-                    buff[buffptr + 2] = '.';
-                    buff[buffptr + 3] = '\r';
-                    buff[buffptr + 4] = '\n';
-                    buffptr+=5;
+                    buff[buffptr] = '.';
+                    buff[buffptr + 1] = '\r';
+                    buff[buffptr + 2] = '\n';
+                    buffptr+=2;
                     buffptr_copy=buffptr;
                     break;
                 }
@@ -318,9 +316,23 @@ int main(int argc, char *argv[])
                 continue;
             }
             printf("Mail entered:\n");
-            for(int i=0;i<buffptr;i++)
+            for(int i=0;i<4;i++)
             {
                 printf("%c",buff[i]);
+            }
+            char* mailBuf = (char*)malloc((MAX+1)*sizeof(char));
+            memset(mailBuf, '\0', MAX+1);
+            strcpy(mailBuf, buff);
+            int mailBufSize = strlen(mailBuf);
+            printf("mailBufSize: %d\n", mailBufSize);
+            for(int i=0;i<mailBufSize;i++)
+            {
+                if(mailBuf[i] == '\r'){
+                    printf("\\r");
+                }
+                else{
+                    printf("%c",mailBuf[i]);
+                }
             }
             printf("waiting\n");
 
@@ -344,7 +356,7 @@ int main(int argc, char *argv[])
                         domain[i - 5] = '\0';
                         break;
                     }
-                    domain[i - 5] = buff[i];
+                    domain[i - 5] = buff1[i];
                 }
             }
             else
@@ -416,6 +428,9 @@ int main(int argc, char *argv[])
             getcrlf(line, buff1);
              b = strtok(line, " ");
               status = atoi(b);
+
+
+
             if(status!=354)
             {
                 printf("Error Server Sent: %s\n", line);
@@ -424,15 +439,18 @@ int main(int argc, char *argv[])
             else {
                  printf("Server Sent: %s\n", line);
             }
-        buff[buffptr_copy+1]='\0';
-        printf("buffptr :%d\n",buffptr_copy);
-        for(int i=0;i<buffptr_copy;i++)
-        {
-            printf("%c",buff[i]);
-        }
-        printf("\n");
+        // buff[buffptr_copy+1]='\0';
+        // printf("buffptr :%d\n",buffptr_copy);
+        // for(int i=0;i<buffptr_copy;i++)
+        // {
+        //     printf("%c",buff[i]);
+        // }
+            printf("\n");
        // printf("buff :%s\n",buff);
-            send(sock, buff, buffptr_copy, 0);
+            if(send(sock, buff, buffptr+1, 0) < 0){
+                perror("Unable to send data\n");
+                exit(0);
+            }
             printf("sent\n");
              getcrlf(line, buff1);
             b = strtok(line, " ");

@@ -203,6 +203,7 @@ int main(int argc, char* argv[]){
                     perror("Error in receiving message at RECEIVING MAIL\n");
                     exit(0);
                 }
+
                 buf[n] = '\0';
                 if((total_len  > 0) && (mainBuf[total_len - 1] == '\r') && (buf[0] == '\n')){
                     mainBuf[total_len - 1] = '\n';
@@ -212,16 +213,20 @@ int main(int argc, char* argv[]){
                     if(buf[i] == '\r' && buf[i+1] == '\n'){
                         buf[i] = '\n';
                         buf[i+1] = '\0';
+                        printf("%d\n",i);
                     }
                 }
-                strncpy(mainBuf, buf, n);
+                for(int i=0;i < n;i++){
+                    mainBuf[total_len + i] = buf[i];
+                }
                 total_len += n;
-                if( total_len > 5 
-                    && mainBuf[total_len - 1] == '\0'
-                    && mainBuf[total_len - 2] == '\n'
-                    && mainBuf[total_len - 3] == '.'
-                    && mainBuf[total_len - 4] == '\0'
-                    && mainBuf[total_len - 5] == '\n'){
+                printf("Total len: %d\n",total_len);
+                if( (total_len > 4) 
+                    && (mainBuf[total_len - 1] == '\0')
+                    && (mainBuf[total_len - 2] == '\n')
+                    && (mainBuf[total_len - 3] == '.')
+                    && (mainBuf[total_len - 4] == '\0')
+                    && (mainBuf[total_len - 5] == '\n')){
                     break;
                 }
                 memset(buf, '\0', MAX);
