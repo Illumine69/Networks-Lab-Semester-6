@@ -5,6 +5,16 @@ Assignment 3: Mail Server and Client
 File: smtpmail.c
 */
 
+/*
+Instructions for the evaluator:
+- As mentioned in the assignment, you need to create subdirectories with name of user.
+  Each such subdirectory should have a file named "mymailbox" which will store the mails.
+  For example: if the receiver email is abc@xyz, create :
+    |--abc
+        |-- mymailbox
+- Ensure that the domain name is set to iitkgp.edu as that is the domain name used by the server
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
