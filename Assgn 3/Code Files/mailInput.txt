@@ -1,5 +1,5 @@
 From: karthik@iitkgp.edu
-To: sanskar@iitkgp.edu
+To: karthik@iitkgp.edu
 Subject: Regarding the project
 This message is for testing purpose only
 .

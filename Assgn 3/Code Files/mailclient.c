@@ -438,7 +438,7 @@ int main(int argc, char *argv[])
             }
             else
             {
-                printf("S: %s\n", line);
+                //printf("S: %s\n", line);
             }
             // buff[buffptr_copy+1]='\0';
             // printf("buffptr :%d\n",buffptr_copy);
