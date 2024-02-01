@@ -140,21 +140,14 @@ int validsyntax(char mainbuff[], char String[], int *buffptr, int issubj, char s
 int main(int argc, char *argv[])
 {
     int buffptr = 0;
-    int lineptr = 0;
-    int k;
-    int servlen;
-    char filename[100];
     char username[50];
     char password[50];
     char ip[30];
     int choice;
     char mainbuff[5000];
     char domain[50];
-    char msg[50];
     char sender[50];
     char receiver[50];
-    int fp;
-    int n;
     int len;
     int status;
     char transient_buff[5000];
@@ -175,19 +168,18 @@ int main(int argc, char *argv[])
     char *From = "From: ";
     char *To = "To: ";
     char *Subject = "Subject: ";
-    printf("Enter the username\n");
+    printf("Enter the username: ");
     scanf("%s", username);
-    printf("Enter the password\n");
+    printf("Enter the password: ");
     scanf("%s", password);
 
     while (1)
     {
         fflush(stdin);
         buffptr = 0;
-        lineptr = 0;
         int wrongsyntax = 0;
 
-        printf("Enter a choice:\n1.Manage Mail\n2.Send Mail\n3.Quit\n");
+        printf("\nEnter a choice:\n1.Manage Mail\n2.Send Mail\n3.Quit\n\nChoice: ");
         scanf("%d", &choice);
         getchar();
 
@@ -388,11 +380,16 @@ int main(int argc, char *argv[])
             printf("Mail Sent Successfully\n");
             close(sock);
         }
-
-        else
+        else if(choice == 1){
+            printf("Will be implemented in next version\n");
+        }
+        else if(choice == 3)
         {
-            printf("Exiting\n..");
+            printf("\nExiting...\n");
             exit(0);
+        }
+        else{
+            printf("\nInvalid Choice\n");
         }
     }
 }
