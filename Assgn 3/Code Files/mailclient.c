@@ -74,18 +74,24 @@ int validsyntax(char buff[], char From[], int * buffptr,int subj,char sender [],
     
     //gets(buff + buffptr);
     len = strlen(buff + *buffptr) ;
+    if(len<strlen(From))return 0;
      //printf("Len:%d\n",len);
     int flag = 1;
     int at_therate = 0;
     if(person==0)
     {
         strcpy(sender,buff+*buffptr+strlen(From));
+        if(strlen(sender)<3)return 0;
+        sender[strlen(sender)-1]='\0';
         //printf("Sender is %s\n",sender);
     }
     else if(person==1)
     {
+    
       
         strcpy(receiver,buff+*buffptr+strlen(From));
+        if(strlen(receiver)<3)return 0;
+        receiver[strlen(receiver)-1]='\0';
        // printf("Receiver is %s\n",receiver);
     }
     
@@ -250,6 +256,7 @@ int main(int argc, char *argv[])
                 {
                     if(!validsyntax(buff,From,&buffptr,0,sender,receiver,0))
                     {
+                        //printf("")
                         //printf("Syntax error\n");
                         wrongsyntax=1;
                         break;
@@ -311,8 +318,8 @@ int main(int argc, char *argv[])
             }
             if ((wrongsyntax))
             {
-                printf("Syntax error\n");
-                exit(0);
+                printf("******Syntax error*******\n\n\n");
+                
                 continue;
             }
             printf("Mail entered:\n");
