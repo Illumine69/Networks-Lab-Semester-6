@@ -10,5 +10,9 @@ runserver: smtpmail.c
 	gcc -Wall smtpmail.c -o smtpmail
 	./smtpmail 24000
 
+runpop: popserver.c
+	gcc -Wall popserver.c -o popserver
+	./popserver 32000
+
 clean:
 	rm mailclient smtpmail
