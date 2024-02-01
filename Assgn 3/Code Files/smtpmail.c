@@ -216,14 +216,12 @@ int main(int argc, char* argv[]){
                     if(buf[i] == '\r' && buf[i+1] == '\n'){
                         buf[i] = '\n';
                         buf[i+1] = '\0';
-                        printf("%d\n",i);
                     }
                 }
                 for(int i=0;i < n;i++){
                     mainBuf[total_len + i] = buf[i];
                 }
                 total_len += n;
-                printf("Total len: %d\n",total_len);
                 if( (total_len > 4) 
                     && (mainBuf[total_len - 1] == '\0')
                     && (mainBuf[total_len - 2] == '\n')
