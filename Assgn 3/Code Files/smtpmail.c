@@ -119,6 +119,7 @@ int main(int argc, char* argv[]){
             char* mail = (char*)malloc((MAX + 10)*sizeof(char));
             char* recvTime = (char*)malloc((100)*sizeof(char));
             char* userFileName = (char*)malloc((MAX + 10)*sizeof(char));
+            char* domain = (char*)malloc((MAX + 10)*sizeof(char));
 
             memset(mainBuf, '\0', MAX);
             memset(buf, '\0', MAX);
@@ -127,6 +128,7 @@ int main(int argc, char* argv[]){
             memset(mailTo, '\0', MAX);
             memset(recvTime, '\0', 100);
             memset(userFileName, '\0', MAX);
+            memset(domain, '\0', MAX);
 
             // Send SERVICE READY
             sprintf(buf, "220 <iitkgp.edu> Service ready\r\n");
@@ -169,6 +171,12 @@ int main(int argc, char* argv[]){
                         mailTo[j-i-1] = mainBuf[j];
                         ++j;
                     }
+                    i = j;
+                    j = i+1;
+                    while(mainBuf[j] != '>'){
+                        domain[j-i-1] = mainBuf[j];
+                        ++j;
+                    }
                     break;
                 }
             }
@@ -181,6 +189,14 @@ int main(int argc, char* argv[]){
                 memset(noUserErr, '\0', MAX);
                 sprintf(noUserErr, "550 No such user\r\n");
                 sendData(newsockfd, noUserErr, 0, "Client closed connection at WRONG TARGET USER\n", "Error in sending message at WRONG TARGET USER\n");
+                free(noUserErr);
+                exit(EXIT_FAILURE);
+            }
+            if(strcmp(domain, "iitkgp.edu") != 0){
+                char* wrongDomainErr = (char*)malloc((MAX + 10)*sizeof(char));
+                memset(wrongDomainErr, '\0', MAX);
+                sprintf(wrongDomainErr, "550 No such domain\r\n");
+                sendData(newsockfd, wrongDomainErr, 0, "Client closed connection at WRONG TARGET DOMAIN\n", "Error in sending message at WRONG TARGET DOMAIN\n");
                 exit(EXIT_FAILURE);
             }
 
