@@ -49,10 +49,10 @@ void recvData(int sockfd, char* buf, char* mainBuf, int size, int flags, char* e
     printf("C: %s",mainBuf);
 }
 
-void sendData(int sockfd, char* buf, int flags, char* errMsg, char* errExpected){
+void sendData(int sockfd, char* buf, int flags, char* errConnection, char* errMsg){
     if(send(sockfd, buf, strlen(buf), flags) == -1){
         if(errno == EPIPE){
-            perror(errExpected);
+            perror(errConnection);
             exit(EXIT_FAILURE);
         }
         else{
@@ -114,10 +114,11 @@ int main(int argc, char* argv[]){
             // Char buff used for sending and receiving messages
             char* buf = (char*)malloc((MAX + 10)*sizeof(char));
             char* mainBuf = (char*)malloc((MAX + 10)*sizeof(char));
-            char* mailFrom = (char*)malloc((MAX)*sizeof(char));
+            char* mailFrom = (char*)malloc((MAX)*sizeof(char));     // This also includes sender's domain name
             char* mailTo = (char*)malloc((MAX)*sizeof(char));
             char* mail = (char*)malloc((MAX + 10)*sizeof(char));
             char* recvTime = (char*)malloc((100)*sizeof(char));
+            char* userFileName = (char*)malloc((MAX + 10)*sizeof(char));
 
             memset(mainBuf, '\0', MAX);
             memset(buf, '\0', MAX);
@@ -125,6 +126,7 @@ int main(int argc, char* argv[]){
             memset(mailFrom, '\0', MAX);
             memset(mailTo, '\0', MAX);
             memset(recvTime, '\0', 100);
+            memset(userFileName, '\0', MAX);
 
             // Send SERVICE READY
             sprintf(buf, "220 <iitkgp.edu> Service ready\r\n");
@@ -144,7 +146,7 @@ int main(int argc, char* argv[]){
             for(int i=0;i < strlen(mainBuf);++i){
                 if(mainBuf[i] == '<'){
                     int j = i+1;
-                    while(mainBuf[j] != '@'){
+                    while(mainBuf[j] != '>'){
                         mailFrom[j-i-1] = mainBuf[j];
                         ++j;
                     }
@@ -154,7 +156,7 @@ int main(int argc, char* argv[]){
 
             // Acknowledge MAIL FROM and send OK
             memset(buf, '\0', MAX);
-            sprintf(buf, "250 <%s@iitkgp.edu>... Sender ok\r\n", mailFrom);
+            sprintf(buf, "250 <%s>... Sender ok\r\n", mailFrom);
             sendData(newsockfd, buf, 0, "Client closed connection at ACKNOWLEDGING SENDING USER\n", "Error in sending message at ACKNOWLEDGING SENDING USER\n");
 
             // identify target user
@@ -171,6 +173,17 @@ int main(int argc, char* argv[]){
                 }
             }
 
+            // Open file descriptor for storing mail
+            sprintf(userFileName, "%s/mymailbox", mailTo);
+            int mymailbox = open(userFileName, O_RDWR | O_APPEND, 0777);
+            if(mymailbox < 0){
+                char* noUserErr = (char*)malloc((MAX + 10)*sizeof(char));
+                memset(noUserErr, '\0', MAX);
+                sprintf(noUserErr, "550 No such user\r\n");
+                sendData(newsockfd, noUserErr, 0, "Client closed connection at WRONG TARGET USER\n", "Error in sending message at WRONG TARGET USER\n");
+                exit(EXIT_FAILURE);
+            }
+
             // Acknowledge RCPT TO and send OK
             memset(buf, '\0', MAX);
             sprintf(buf, "250 root... Recipient ok\r\n");
@@ -183,16 +196,6 @@ int main(int argc, char* argv[]){
             memset(buf, '\0', MAX);
             sprintf(buf, "354 Enter mail, end with \".\" on a line by itself\r\n");
             sendData(newsockfd, buf, 0, "Client closed connection at ACKNOWLEDGING DATA\n", "Error in sending message at ACKNOWLEDGING DATA\n");
-
-            // Open file descriptor for storing mail
-            char* userFileName = (char*)malloc((MAX + 10)*sizeof(char));
-            memset(userFileName, '\0', MAX);
-            sprintf(userFileName, "%s/mymailbox", mailTo);
-            int mymailbox = open(userFileName, O_RDWR | O_CREAT | O_APPEND, 0777);
-            if(mymailbox < 0){
-                perror("Unable to create file\n");
-                exit(1);
-            }
 
             // Receive mail
             memset(buf, '\0', MAX);
@@ -288,6 +291,9 @@ int main(int argc, char* argv[]){
             free(mailFrom);
             free(mailTo);
             free(userFileName);
+            free(mail);
+            free(recvTime);
+
             exit(0);
         }
         close(newsockfd);
