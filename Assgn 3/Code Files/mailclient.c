@@ -74,10 +74,15 @@ int validsyntax(char buff[], char From[], int *buffptr, int subj, char sender[],
 {
     int len;
 
+
     // gets(buff + buffptr);
     len = strlen(buff + *buffptr);
     if (len < strlen(From))
+    {
+        // printf("returning 0\n");
         return 0;
+    }
+       
     // printf("Len:%d\n",len);
     int flag = 1;
     int at_therate = 0;
@@ -85,7 +90,11 @@ int validsyntax(char buff[], char From[], int *buffptr, int subj, char sender[],
     {
         strcpy(sender, buff + *buffptr + strlen(From));
         if (strlen(sender) < 3)
+        {
+           // printf("returning 0\n");
             return 0;
+        }
+          
         sender[strlen(sender) - 1] = '\0';
         // printf("Sender is %s\n",sender);
     }
@@ -94,7 +103,12 @@ int validsyntax(char buff[], char From[], int *buffptr, int subj, char sender[],
 
         strcpy(receiver, buff + *buffptr + strlen(From));
         if (strlen(receiver) < 3)
+        {
+            //printf("returning 0\n");
             return 0;
+
+        }
+            
         receiver[strlen(receiver) - 1] = '\0';
         // printf("Receiver is %s\n",receiver);
     }
@@ -111,6 +125,8 @@ int validsyntax(char buff[], char From[], int *buffptr, int subj, char sender[],
             }
             continue;
         }
+       // printf("here\n");
+        fflush(stdout);
 
         if (buff[i + *buffptr] == '@')
             at_therate = 1;
@@ -196,6 +212,7 @@ int main(int argc, char *argv[])
 
     while (1)
     {
+        fflush(stdin);
         buffptr = 0;
         lineptr = 0;
         int wrongsyntax = 0;
