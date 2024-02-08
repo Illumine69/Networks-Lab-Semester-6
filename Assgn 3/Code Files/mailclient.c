@@ -65,10 +65,10 @@ int getcrlf(char cache[], char transient_buff[], int mode)
                     cache[cacheptr++] = transient_buff[i];
                 }
                 n = recv(sock, transient_buff, MAX, 0);
-                for(int i=0;i<n;i++)
+                for (int i = 0; i < n; i++)
                 {
-                    if(transient_buff[i]!='\r')
-                    printf("%c",transient_buff[i]);
+                    if (transient_buff[i] != '\r')
+                        printf("%c", transient_buff[i]);
                 }
             }
             else
@@ -94,10 +94,10 @@ int getcrlf(char cache[], char transient_buff[], int mode)
     }
     return 0;
 }
-void printsummary( int message_no,int fullmsg,int deleted_messages [])
+void printsummary(int message_no, int fullmsg, int deleted_messages[])
 {
-    //check if message is present
-    if(message_no<1)
+    // check if message is present
+    if (message_no < 1)
     {
         printf("Invalid number\n");
         return;
@@ -107,63 +107,64 @@ void printsummary( int message_no,int fullmsg,int deleted_messages [])
     char filename[20];
     sprintf(filename, "./mail/%d.txt", message_no);
     fp = fopen(filename, "r");
-    printf("%d\t\t",message_no);
-    if(deleted_messages[message_no])
+    printf("%d\t\t", message_no);
+    if (deleted_messages[message_no])
     {
         printf("Deleted\n");
         return;
     }
-    if(!fullmsg)
+    if (!fullmsg)
     {
         char time[100];
         char Subject[1000];
         char line[5000];
-        memset(time,0,sizeof(time));
-        memset(Subject,0,sizeof(Subject));
-        memset(line,0,sizeof(line));
-        int i=0;
-        while(fgets(line,5000,fp))
+        memset(time, 0, sizeof(time));
+        memset(Subject, 0, sizeof(Subject));
+        memset(line, 0, sizeof(line));
+        int i = 0;
+        while (fgets(line, 5000, fp))
         {
-             if(i==1)
+            if (i == 1)
             {
-               char * a;
-                a=strtok(line," ");
-                a=strtok(NULL," ");
-                int len=strlen(a);
-                a[len-1]='\0';
-                printf("%s",a);
+                char *a;
+                a = strtok(line, " ");
+                a = strtok(NULL, " ");
+                int len = strlen(a);
+                a[len - 1] = '\0';
+                printf("%s", a);
             }
-            else if(i==3)
+            else if (i == 3)
             {
-                strcpy(Subject,line);
+                strcpy(Subject, line);
             }
-            else if(i==4)
+            else if (i == 4)
             {
                 int len = strlen(line);
-                line[len-1]='\0';
-                printf("\t\t%s",line);
-                printf("\t\t%s",Subject);
+                line[len - 1] = '\0';
+                printf("\t\t%s", line);
+                printf("\t\t%s", Subject);
             }
             i++;
-            if(i>4)
+            if (i > 4)
             {
                 break;
             }
         }
     }
-    else {
+    else
+    {
         char line[5000];
-        memset(line,0,sizeof(line));
-        int i=0;
-        while(fgets(line,5000,fp))
+        memset(line, 0, sizeof(line));
+        int i = 0;
+        while (fgets(line, 5000, fp))
         {
-            if(i==1)
+            if (i == 1)
             {
-                printf("%s",line);
+                printf("%s", line);
             }
-            else if(i>1)
+            else if (i > 1)
             {
-                printf("\t\t%s",line);
+                printf("\t\t%s", line);
             }
             i++;
         }
@@ -291,6 +292,9 @@ int main(int argc, char *argv[])
         if (choice == 2)
 
         {
+            server.sin_family = AF_INET;
+            server.sin_addr.s_addr = inet_addr(ip);
+            server.sin_port = htons(smtp_port);
 
             if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
             {
@@ -488,15 +492,15 @@ int main(int argc, char *argv[])
         else if (choice == 1)
         {
 
-            //create a directory to store the messages
+            // create a directory to store the messages
             struct stat st = {0};
 
-            if (stat("./mail", &st) == -1) {
-                if(mkdir("./mail", 0777)<0)
+            if (stat("./mail", &st) == -1)
+            {
+                if (mkdir("./mail", 0777) < 0)
                 {
                     perror("Error in creating directory\n");
                     exit(0);
-                
                 }
             }
 
@@ -589,9 +593,9 @@ int main(int argc, char *argv[])
                     printf("Error Server Sent: %s\n", line);
                     continue;
                 }
-                
+
                 a = strtok(NULL, " ");
-                a= strtok(NULL, " ");
+                a = strtok(NULL, " ");
                 sum += atoi(a);
                 individual_mssg_size[i] = atoi(a);
             }
@@ -635,36 +639,36 @@ int main(int argc, char *argv[])
                 }
                 fclose(fp);
             }
-            int print_main_menu=0;
-            while(1)
+            int print_main_menu = 0;
+            while (1)
             {
-              for(int i=1;i<=n_messages;i++)
-              {
-                    printsummary(i,0,is_deleted_message);
-                   
-              }
-              printf("Enter mail no: ");
+                for (int i = 1; i <= n_messages; i++)
+                {
+                    printsummary(i, 0, is_deleted_message);
+                }
+                printf("Enter mail no: ");
                 int mailno;
-                scanf("%d",&mailno);
-                while(mailno!=-1&&mailno>n_messages)
+                scanf("%d", &mailno);
+                while (mailno != -1 && mailno > n_messages)
                 {
                     printf("mail out of range give again:");
-                    scanf("%d",&mailno);
+                    scanf("%d", &mailno);
                 }
-                if(mailno==-1)
+                if (mailno == -1)
                 {
                     // clear the mail directory
-                    for(int i=1;i<=n_messages;i++)
+                    for (int i = 1; i <= n_messages; i++)
                     {
                         char filename[20];
                         sprintf(filename, "./mail/%d.txt", i);
-                        if(remove(filename) != 0) {
+                        if (remove(filename) != 0)
+                        {
                             perror("Error in removing file\n");
                         }
                     }
                     rmdir("./mail");
-                                        
-                    //send quit to the server
+
+                    // send quit to the server
                     sprintf(transient_buff, "QUIT");
                     len = strlen(transient_buff);
                     transient_buff[len] = '\r';
@@ -675,17 +679,17 @@ int main(int argc, char *argv[])
                     if (strcmp(a, "+OK") != 0)
                     {
                         printf("Error Server Sent: %s\n", line);
-                        
                     }
 
-                    print_main_menu=1;
+                    print_main_menu = 1;
                     break;
                 }
-                else{
-                    printsummary(mailno,1,is_deleted_message);
+                else
+                {
+                    printsummary(mailno, 1, is_deleted_message);
                     fflush(stdin);
-                    char delete=getchar();
-                    if(delete=='d')
+                    char delete = getchar();
+                    if (delete == 'd')
                     {
                         sprintf(transient_buff, "DELE %d", mailno);
                         len = strlen(transient_buff);
@@ -700,11 +704,11 @@ int main(int argc, char *argv[])
                             printf("Error Server Sent: %s\n", line);
                             continue;
                         }
-                        is_deleted_message[mailno]=1;
+                        is_deleted_message[mailno] = 1;
                     }
                 }
             }
-            if(print_main_menu)
+            if (print_main_menu)
             {
                 continue;
             }
