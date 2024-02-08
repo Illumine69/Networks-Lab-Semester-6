@@ -24,9 +24,10 @@ int sock;
 // recving function from server side
 // transient_buff is used receive
 // if \r\n is not found then it is cahced in cache until it is found
-void getcrlf(char cache[], char transient_buff[])
+int getcrlf(char cache[], char transient_buff[], int mode)
 {
-    int mode=0;
+    // int mode=0;//get clrf mode or get clrf . clrfl mode
+    // int mssgno=1;
     int n = 0;
     int cacheptr = 0;
     int done = 0;
@@ -44,38 +45,131 @@ void getcrlf(char cache[], char transient_buff[])
 
         if (n > 0)
         {
-            if(!mode)
+            if (!mode)
             {
-                 for (int i = 0; i < n - 1; i++)
-            {
-
-                if (((transient_buff[i] == '\r') && (transient_buff[i + 1] == '\n')) || (cache[cacheptr] == '\r' && transient_buff[0] == '\n'))
+                for (int i = 0; i < n - 1; i++)
                 {
-                    transient_buff[i] = '\0';
-                    strcpy(cache, transient_buff);
-                    done = 1;
 
+                    if (((transient_buff[i] == '\r') && (transient_buff[i + 1] == '\n')) || (cache[cacheptr] == '\r' && transient_buff[0] == '\n'))
+                    {
+                        transient_buff[i] = '\0';
+                        strcpy(cache, transient_buff);
+                        done = 1;
+
+                        break;
+                    }
+                }
+                if (done)
+                    break;
+                for (int i = 0; i < n; i++)
+                {
+                    cache[cacheptr++] = transient_buff[i];
+                }
+                // strcpy(cache + cacheptr, transient_buff);
+                // cacheptr += n;
+                n = recv(sock, transient_buff, MAX, 0);
+            }
+            else
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    cache[cacheptr++] = transient_buff[i];
+                }
+                if (cache[cacheptr - 1] == '\n' && cache[cacheptr - 2] == '\r' && cache[cacheptr - 3] == '.' && cache[cacheptr - 4] == '\n' && cache[cacheptr - 5] == '\r')
+                {
+                    done = 1;
                     break;
                 }
+                if (done)
+                    break;
+                n = recv(sock, transient_buff, MAX, 0);
             }
-            if (done)
-                break;
-                for(int i=0;i<n;i++)
-                {
-                    cache[cacheptr++]=transient_buff[i];
-                }
-           // strcpy(cache + cacheptr, transient_buff);
-            //cacheptr += n;
-            n = recv(sock, transient_buff, MAX, 0);
-
-            }
-            else {
-
-            }
-           
         }
     }
-    return;
+    if (mode)
+    {
+        // FILE *fp;
+        // char filename[20]="temp.txt";
+        // fp=fopen(filename,"a");
+        // for(int i=0;i<cacheptr;i++)
+        // {
+        //     if(cache[i]!='\r')
+        //     fprintf(fp,"%c",cache[i]);
+        // }
+        // fclose(fp);
+        return cacheptr;
+    }
+    return 0;
+}
+void printsummary( int message_no,int fullmsg,int deleted_messages [])
+{
+    //check if messgae is present
+
+    FILE *fp;
+    char filename[20];
+    sprintf(filename, "/mails/%d.txt", message_no);
+    fp = fopen(filename, "r");
+    printf("%d\t\t",message_no);
+    if(deleted_messages[message_no])
+    {
+        printf("Deleted\n");
+        return;
+    }
+    if(!fullmsg)
+    {
+        char time[100];
+        char Subject[1000];
+        char line[5000];
+        int i=0;
+        while(fgets(line,5000,fp))
+        {
+             if(i==1)
+            {
+
+               // printf("To: %s\n",line);
+               char * a;
+                a=strtok(line," ");
+                a=strtok(NULL," ");
+                printf("%s",a);
+
+
+            }
+            else if(i==2)
+            {
+                strcpy(time,line);
+            }
+            else if(i==3)
+            {
+                puts(line);
+                printf("\t\t");
+                puts(time);
+                printf("\n");
+            }
+            i++;
+            if(i>3)
+            {
+                break;
+            }
+        }
+
+    }
+    else {
+        char line[5000];
+        int i=0;
+        while(fgets(line,5000,fp))
+        {
+            if(i)
+            {
+                puts(line);
+
+            }
+            i++;
+            
+        }
+    
+    }
+
+
 }
 // add char sender and receiver
 // checks if the syntax is correct
@@ -129,7 +223,7 @@ int validsyntax(char mainbuff[], char String[], int *buffptr, int issubj, char s
             }
             continue;
         }
-        //fflush(stdout);
+        // fflush(stdout);
 
         if (mainbuff[i + *buffptr] == '@')
             at_therate = 1;
@@ -150,35 +244,7 @@ int validsyntax(char mainbuff[], char String[], int *buffptr, int issubj, char s
 
     return 1;
 }
-//function to get al the messgaes from the server
-int getallmessages(int n_messages, int individual_mssg_size[], char transient_buff[])
-{
-    int total_size=0;
-    int sum=0;
-    for(int i=1;i<=n_messages;i++)
-    {
-        sprintf(transient_buff, "RETR %d", i);
-        int len = strlen(transient_buff);
-        transient_buff[len] = '\r';
-        transient_buff[len + 1] = '\n';
-        send(sock, transient_buff, len + 2, 0);
-        //getcrlf(line, transient_buff);
-        //char *a = strtok(line, " ");
-        // if(strcmp(a, "+OK") != 0)
-        // {
-        //     printf("Error Server Sent: %s\n", line);
-        //     return 0;
-        // }
-        int mssg_size = individual_mssg_size[i];
-    }
-    }
-
-
-
-
-
-
-
+// function to get al the messgaes from the server
 
 int main(int argc, char *argv[])
 {
@@ -249,11 +315,11 @@ int main(int argc, char *argv[])
 
                 gets(mainbuff + buffptr);
                 len = strlen(mainbuff + buffptr);
-                //gets does not add \n at the end
-                //so manually adding it
+                // gets does not add \n at the end
+                // so manually adding it
                 mainbuff[len + buffptr] = '\n';
                 mainbuff[len + buffptr + 1] = '\0';
-                if (!Lineno)//checking syntax of from
+                if (!Lineno) // checking syntax of from
                 {
                     if (!validsyntax(mainbuff, From, &buffptr, 0, sender, receiver, 0))
                     {
@@ -261,7 +327,7 @@ int main(int argc, char *argv[])
                         break;
                     }
                 }
-                else if (Lineno == 1)//checking syntax of to
+                else if (Lineno == 1) // checking syntax of to
                 {
                     if (!validsyntax(mainbuff, To, &buffptr, 0, sender, receiver, 1))
                     {
@@ -269,7 +335,7 @@ int main(int argc, char *argv[])
                         break;
                     }
                 }
-                else if (Lineno == 2)//checking syntax of subject
+                else if (Lineno == 2) // checking syntax of subject
                 {
                     if (!validsyntax(mainbuff, Subject, &buffptr, 1, sender, receiver, 3))
                     {
@@ -297,7 +363,7 @@ int main(int argc, char *argv[])
                     mainbuff[buffptr] = '\n';
                     buffptr++;
                 }
-                
+
                 Lineno++;
             }
             if ((wrongsyntax))
@@ -307,7 +373,7 @@ int main(int argc, char *argv[])
 
                 continue;
             }
-            getcrlf(line, transient_buff);
+            getcrlf(line, transient_buff, 0);
 
             char *a = strtok(line, " ");
             status = atoi(a);
@@ -335,7 +401,7 @@ int main(int argc, char *argv[])
             transient_buff[len] = '\r';
             transient_buff[len + 1] = '\n';
             send(sock, transient_buff, len + 2, 0);
-            getcrlf(line, transient_buff);
+            getcrlf(line, transient_buff, 0);
 
             char *b = strtok(line, " ");
             status = atoi(b);
@@ -351,7 +417,7 @@ int main(int argc, char *argv[])
             transient_buff[len] = '\r';
             transient_buff[len + 1] = '\n';
             send(sock, transient_buff, len + 2, 0);
-            getcrlf(line, transient_buff);
+            getcrlf(line, transient_buff, 0);
             b = strtok(line, " ");
             status = atoi(b);
             if (status != 250)
@@ -365,7 +431,7 @@ int main(int argc, char *argv[])
             transient_buff[len] = '\r';
             transient_buff[len + 1] = '\n';
             send(sock, transient_buff, len + 2, 0);
-            getcrlf(line, transient_buff);
+            getcrlf(line, transient_buff, 0);
             b = strtok(line, " ");
             status = atoi(b);
             if (status != 250)
@@ -379,7 +445,7 @@ int main(int argc, char *argv[])
             transient_buff[len] = '\r';
             transient_buff[len + 1] = '\n';
             send(sock, transient_buff, len + 2, 0);
-            getcrlf(line, transient_buff);
+            getcrlf(line, transient_buff, 0);
             b = strtok(line, " ");
             status = atoi(b);
 
@@ -397,7 +463,7 @@ int main(int argc, char *argv[])
                 exit(0);
             }
 
-            getcrlf(line, transient_buff);
+            getcrlf(line, transient_buff, 0);
             b = strtok(line, " ");
             status = atoi(b);
             if (status != 250)
@@ -411,7 +477,7 @@ int main(int argc, char *argv[])
             transient_buff[len] = '\r';
             transient_buff[len + 1] = '\n';
             send(sock, transient_buff, len + 2, 0);
-            getcrlf(line, transient_buff);
+            getcrlf(line, transient_buff, 0);
             b = strtok(line, " ");
             status = atoi(b);
             if (status != 221)
@@ -423,17 +489,26 @@ int main(int argc, char *argv[])
             printf("Mail Sent Successfully\n");
             close(sock);
         }
-        else if(choice == 1){
-             int n_messages=0;
-             int total_size=0;
-        //      strcpy(ip, argv[1]);
-        // int smtp_port = atoi(argv[2]);
-        // int pop3_port = atoi(argv[3]);
-        memset(&server, 0, sizeof(server));
-         server.sin_family = AF_INET;
-         server.sin_addr.s_addr = inet_addr(ip);
-        server.sin_port = htons(pop3_port);
+        else if (choice == 1)
+        {
 
+            //create a directory to store the messages
+            struct stat st = {0};
+
+        if (stat("/mails", &st) == -1) {
+    mkdir("/mails", 0777);
+        }
+
+            int n_messages = 0;
+            int total_size = 0;
+
+            //      strcpy(ip, argv[1]);
+            // int smtp_port = atoi(argv[2]);
+            // int pop3_port = atoi(argv[3]);
+            memset(&server, 0, sizeof(server));
+            server.sin_family = AF_INET;
+            server.sin_addr.s_addr = inet_addr(ip);
+            server.sin_port = htons(pop3_port);
 
             if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
             {
@@ -446,13 +521,10 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
 
-
-
-
-            //first recevie the hello message from the server
-            getcrlf(line, transient_buff);
+            // first recevie the hello message from the server
+            getcrlf(line, transient_buff, 0);
             char *a = strtok(line, " ");
-            if(strcmp(a, "+OK") != 0)
+            if (strcmp(a, "+OK") != 0)
             {
                 printf("Error Server Sent: %s\n", line);
                 continue;
@@ -463,9 +535,9 @@ int main(int argc, char *argv[])
             transient_buff[len] = '\r';
             transient_buff[len + 1] = '\n';
             send(sock, transient_buff, len + 2, 0);
-            getcrlf(line, transient_buff);
+            getcrlf(line, transient_buff, 0);
             a = strtok(line, " ");
-            if(strcmp(a, "+OK") != 0)
+            if (strcmp(a, "+OK") != 0)
             {
                 printf("Error Server Sent: %s\n", line);
                 continue;
@@ -475,9 +547,9 @@ int main(int argc, char *argv[])
             transient_buff[len] = '\r';
             transient_buff[len + 1] = '\n';
             send(sock, transient_buff, len + 2, 0);
-            getcrlf(line, transient_buff);
+            getcrlf(line, transient_buff, 0);
             a = strtok(line, " ");
-            if(strcmp(a, "+OK") != 0)
+            if (strcmp(a, "+OK") != 0)
             {
                 printf("Error Server Sent: %s\n", line);
                 continue;
@@ -487,9 +559,9 @@ int main(int argc, char *argv[])
             transient_buff[len] = '\r';
             transient_buff[len + 1] = '\n';
             send(sock, transient_buff, len + 2, 0);
-            getcrlf(line, transient_buff);
+            getcrlf(line, transient_buff, 0);
             a = strtok(line, " ");
-            if(strcmp(a, "+OK") != 0)
+            if (strcmp(a, "+OK") != 0)
             {
                 printf("Error Server Sent: %s\n", line);
                 continue;
@@ -498,27 +570,32 @@ int main(int argc, char *argv[])
             n_messages = atoi(a);
             a = strtok(NULL, " ");
             total_size = atoi(a);
-            int individual_mssg_size[n_messages+1];
-            int sum=0;
-            for(int i=1;i<=n_messages;i++)
+
+            int is_deleted_message[n_messages + 1];
+            memset(is_deleted_message, 0, sizeof(is_deleted_message));
+
+            int individual_mssg_size[n_messages + 1];
+            int sum = 0;
+
+            for (int i = 1; i <= n_messages; i++)
             {
                 sprintf(transient_buff, "LIST %d", i);
                 len = strlen(transient_buff);
                 transient_buff[len] = '\r';
                 transient_buff[len + 1] = '\n';
                 send(sock, transient_buff, len + 2, 0);
-                getcrlf(line, transient_buff);
+                getcrlf(line, transient_buff, 0);
                 a = strtok(line, " ");
-                if(strcmp(a, "+OK") != 0)
+                if (strcmp(a, "+OK") != 0)
                 {
                     printf("Error Server Sent: %s\n", line);
                     continue;
                 }
                 a = strtok(NULL, " ");
-                sum+=atoi(a);
+                sum += atoi(a);
                 individual_mssg_size[i] = atoi(a);
             }
-            if(sum!=total_size)
+            if (sum != total_size)
             {
                 printf("Error in the total size of the messages from server side\n");
                 sprintf(transient_buff, "QUIT");
@@ -529,31 +606,118 @@ int main(int argc, char *argv[])
 
                 continue;
             }
-            //get all the meesages and store them in an file.
+            // get all the meesages and store them in an file.
+            for (int i = 1; i <= n_messages; i++)
+            {
+                sprintf(transient_buff, "RETR %d", i);
+                len = strlen(transient_buff);
+                transient_buff[len] = '\r';
+                transient_buff[len + 1] = '\n';
+                send(sock, transient_buff, len + 2, 0);
+                int cacheptr = getcrlf(line, transient_buff, 1);
+                char *a;
+                a = strtok(line, " ");
+                if (strcmp(a, "+OK") != 0)
+                {
+                    printf("Error Server Sent: %s\n", line);
+                    continue;
+                }
+                // store them in a file
+                FILE *fp;
+                char filename[20];
+                sprintf(filename, "/mails/%d.txt", i);
+                fp = fopen(filename, "a");
+                for (int i = 0; i < cacheptr; i++)
+                {
+                    if (line[i] != '\r')
+                        fprintf(fp, "%c", line[i]);
+                }
+                fclose(fp);
+            }
+            int print_main_menu=0;
+            while(1)
+            {
+              for(int i=1;i<=n_messages;i++)
+              {
+                    printsummary(i,0,is_deleted_message);
+                   
+              }
+              printf("Enter mail no: ");
+                int mailno;
+                scanf("%d",&mailno);
+                while(mailno!=-1&&mailno>n_messages)
+                {
+                    printf("mail out of range give again:");
+                    //printf("Enter mail no: ");
+                    scanf("%d",&mailno);
+                }
+                if(mailno==-1)
+                {
+                    // clear the mail directory
+                    for(int i=1;i<=n_messages;i++)
+                    {
+                        char filename[20];
+                        sprintf(filename, "/mails/%d.txt", i);
+                        remove(filename);
+                    }
+                    rmdir("/mails");
+                    //send quit to the server
+                    sprintf(transient_buff, "QUIT");
+                    len = strlen(transient_buff);
+                    transient_buff[len] = '\r';
+                    transient_buff[len + 1] = '\n';
+                    send(sock, transient_buff, len + 2, 0);
+                    getcrlf(line, transient_buff, 0);
+                    a = strtok(line, " ");
+                    if (strcmp(a, "+OK") != 0)
+                    {
+                        printf("Error Server Sent: %s\n", line);
+                        
+                    }
+
+                    print_main_menu=1;
+                    break;
+                }
+                else{
+                    printsummary(mailno,1,is_deleted_message);
+                    char delete=getchar();
+                    if(delete=='d')
+                    {
+                        sprintf(transient_buff, "DELE %d", mailno);
+                        len = strlen(transient_buff);
+                        transient_buff[len] = '\r';
+                        transient_buff[len + 1] = '\n';
+                        send(sock, transient_buff, len + 2, 0);
+                        getcrlf(line, transient_buff, 0);
+                        char *a;
+                        a = strtok(line, " ");
+                        if (strcmp(a, "+OK") != 0)
+                        {
+                            printf("Error Server Sent: %s\n", line);
+                            continue;
+                        }
+                        is_deleted_message[mailno]=1;
+                    }
+                    else 
+                    {
+                        break;
+                    }
+                }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-           
-           
+            }
+            if(print_main_menu)
+            {
+                continue;
+            }
         }
-        else if(choice == 3)
+        else if (choice == 3)
         {
             printf("\nExiting...\n");
             exit(0);
         }
-        else{
+        else
+        {
             printf("\nInvalid Choice\n");
         }
     }
