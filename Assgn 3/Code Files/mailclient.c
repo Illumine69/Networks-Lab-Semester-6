@@ -26,6 +26,7 @@ int sock;
 // if \r\n is not found then it is cahced in cache until it is found
 void getcrlf(char cache[], char transient_buff[])
 {
+    int mode=0;
     int n = 0;
     int cacheptr = 0;
     int done = 0;
@@ -43,8 +44,11 @@ void getcrlf(char cache[], char transient_buff[])
 
         if (n > 0)
         {
-            for (int i = 0; i < n - 1; i++)
+            if(!mode)
             {
+                 for (int i = 0; i < n - 1; i++)
+            {
+
                 if (((transient_buff[i] == '\r') && (transient_buff[i + 1] == '\n')) || (cache[cacheptr] == '\r' && transient_buff[0] == '\n'))
                 {
                     transient_buff[i] = '\0';
@@ -56,9 +60,19 @@ void getcrlf(char cache[], char transient_buff[])
             }
             if (done)
                 break;
-            strcpy(cache + cacheptr, transient_buff);
-            cacheptr += n;
+                for(int i=0;i<n;i++)
+                {
+                    cache[cacheptr++]=transient_buff[i];
+                }
+           // strcpy(cache + cacheptr, transient_buff);
+            //cacheptr += n;
             n = recv(sock, transient_buff, MAX, 0);
+
+            }
+            else {
+
+            }
+           
         }
     }
     return;
@@ -115,7 +129,7 @@ int validsyntax(char mainbuff[], char String[], int *buffptr, int issubj, char s
             }
             continue;
         }
-        fflush(stdout);
+        //fflush(stdout);
 
         if (mainbuff[i + *buffptr] == '@')
             at_therate = 1;
@@ -136,6 +150,35 @@ int validsyntax(char mainbuff[], char String[], int *buffptr, int issubj, char s
 
     return 1;
 }
+//function to get al the messgaes from the server
+int getallmessages(int n_messages, int individual_mssg_size[], char transient_buff[])
+{
+    int total_size=0;
+    int sum=0;
+    for(int i=1;i<=n_messages;i++)
+    {
+        sprintf(transient_buff, "RETR %d", i);
+        int len = strlen(transient_buff);
+        transient_buff[len] = '\r';
+        transient_buff[len + 1] = '\n';
+        send(sock, transient_buff, len + 2, 0);
+        //getcrlf(line, transient_buff);
+        //char *a = strtok(line, " ");
+        // if(strcmp(a, "+OK") != 0)
+        // {
+        //     printf("Error Server Sent: %s\n", line);
+        //     return 0;
+        // }
+        int mssg_size = individual_mssg_size[i];
+    }
+    }
+
+
+
+
+
+
+
 
 int main(int argc, char *argv[])
 {
@@ -381,7 +424,121 @@ int main(int argc, char *argv[])
             close(sock);
         }
         else if(choice == 1){
-            printf("Will be implemented in next version\n");
+            int n_messages=0;
+            int total_size=0;
+
+            if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+            {
+                perror("Socket creation for pop3 server failed\n");
+                exit(EXIT_FAILURE);
+            }
+            if ((connect(sock, (struct sockaddr *)&server, sizeof(server))) < 0)
+            {
+                perror("Unable to conncet to pop3 server..Exiting\n");
+                exit(EXIT_FAILURE);
+            }
+
+
+
+
+            //first recevie the hello message from the server
+            getcrlf(line, transient_buff);
+            char *a = strtok(line, " ");
+            if(strcmp(a, "+OK") != 0)
+            {
+                printf("Error Server Sent: %s\n", line);
+                continue;
+            }
+
+            sprintf(transient_buff, "USER %s", username);
+            len = strlen(transient_buff);
+            transient_buff[len] = '\r';
+            transient_buff[len + 1] = '\n';
+            send(sock, transient_buff, len + 2, 0);
+            getcrlf(line, transient_buff);
+            a = strtok(line, " ");
+            if(strcmp(a, "+OK") != 0)
+            {
+                printf("Error Server Sent: %s\n", line);
+                continue;
+            }
+            sprintf(transient_buff, "PASS %s", password);
+            len = strlen(transient_buff);
+            transient_buff[len] = '\r';
+            transient_buff[len + 1] = '\n';
+            send(sock, transient_buff, len + 2, 0);
+            getcrlf(line, transient_buff);
+            a = strtok(line, " ");
+            if(strcmp(a, "+OK") != 0)
+            {
+                printf("Error Server Sent: %s\n", line);
+                continue;
+            }
+            sprintf(transient_buff, "STAT");
+            len = strlen(transient_buff);
+            transient_buff[len] = '\r';
+            transient_buff[len + 1] = '\n';
+            send(sock, transient_buff, len + 2, 0);
+            getcrlf(line, transient_buff);
+            a = strtok(line, " ");
+            if(strcmp(a, "+OK") != 0)
+            {
+                printf("Error Server Sent: %s\n", line);
+                continue;
+            }
+            a = strtok(NULL, " ");
+            n_messages = atoi(a);
+            a = strtok(NULL, " ");
+            total_size = atoi(a);
+            int individual_mssg_size[n_messages+1];
+            int sum=0;
+            for(int i=1;i<=n_messages;i++)
+            {
+                sprintf(transient_buff, "LIST %d", i);
+                len = strlen(transient_buff);
+                transient_buff[len] = '\r';
+                transient_buff[len + 1] = '\n';
+                send(sock, transient_buff, len + 2, 0);
+                getcrlf(line, transient_buff);
+                a = strtok(line, " ");
+                if(strcmp(a, "+OK") != 0)
+                {
+                    printf("Error Server Sent: %s\n", line);
+                    continue;
+                }
+                a = strtok(NULL, " ");
+                sum+=atoi(a);
+                individual_mssg_size[i] = atoi(a);
+            }
+            if(sum!=total_size)
+            {
+                printf("Error in the total size of the messages from server side\n");
+                sprintf(transient_buff, "QUIT");
+                len = strlen(transient_buff);
+                transient_buff[len] = '\r';
+                transient_buff[len + 1] = '\n';
+                send(sock, transient_buff, len + 2, 0);
+
+                continue;
+            }
+            //get all the meesages and store them in an file.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+           
+           
         }
         else if(choice == 3)
         {
