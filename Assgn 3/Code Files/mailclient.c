@@ -27,8 +27,6 @@ int sock;
 // if \r\n is not found then it is cahced in cache until it is found
 int getcrlf(char cache[], char transient_buff[], int mode)
 {
-    // int mode=0;//get clrf mode or get clrf . clrfl mode
-    // int mssgno=1;
     int n = 0;
     int cacheptr = 0;
     int done = 0;
@@ -66,8 +64,6 @@ int getcrlf(char cache[], char transient_buff[], int mode)
                 {
                     cache[cacheptr++] = transient_buff[i];
                 }
-                // strcpy(cache + cacheptr, transient_buff);
-                // cacheptr += n;
                 n = recv(sock, transient_buff, MAX, 0);
                 for(int i=0;i<n;i++)
                 {
@@ -77,8 +73,6 @@ int getcrlf(char cache[], char transient_buff[], int mode)
             }
             else
             {
-                //printf("n:%d\n", n);
-                //fflush(stdout);
                 for (int i = 0; i < n; i++)
                 {
                     cache[cacheptr++] = transient_buff[i];
@@ -96,34 +90,22 @@ int getcrlf(char cache[], char transient_buff[], int mode)
     }
     if (mode)
     {
-        // FILE *fp;
-        // char filename[20]="temp.txt";
-        // fp=fopen(filename,"a");
-        // for(int i=0;i<cacheptr;i++)
-        // {
-        //     if(cache[i]!='\r')
-        //     fprintf(fp,"%c",cache[i]);
-        // }
-        // fclose(fp);
         return cacheptr;
     }
     return 0;
 }
 void printsummary( int message_no,int fullmsg,int deleted_messages [])
 {
-    //check if messgae is present
-
-
-
+    //check if message is present
     if(message_no<1)
     {
-        printf("Mail box Empty\n");
+        printf("Invalid number\n");
         return;
     }
 
     FILE *fp;
     char filename[20];
-    sprintf(filename, "./mails/%d.txt", message_no);
+    sprintf(filename, "./mail/%d.txt", message_no);
     fp = fopen(filename, "r");
     printf("%d\t\t",message_no);
     if(deleted_messages[message_no])
@@ -144,17 +126,12 @@ void printsummary( int message_no,int fullmsg,int deleted_messages [])
         {
              if(i==1)
             {
-
-               // printf("To: %s\n",line);
                char * a;
                 a=strtok(line," ");
                 a=strtok(NULL," ");
                 int len=strlen(a);
                 a[len-1]='\0';
                 printf("%s",a);
-                //printf("%s",a);
-
-
             }
             else if(i==3)
             {
@@ -162,22 +139,10 @@ void printsummary( int message_no,int fullmsg,int deleted_messages [])
             }
             else if(i==4)
             {
-                // printf("\t\t%[^ \n]",line);
-                // printf("\t\t%[^ \n]",Subject);
-                    int len = strlen(line);
-                    line[len-1]='\0';
-
+                int len = strlen(line);
+                line[len-1]='\0';
                 printf("\t\t%s",line);
-                // len=strlen(Subject);
-                // Subject[len-1]='\0';
-
                 printf("\t\t%s",Subject);
-                //printf("\t\t");
-
-              //  printf("\t\t");
-                //puts(time);
-
-              //  printf("\n");
             }
             i++;
             if(i>4)
@@ -185,33 +150,24 @@ void printsummary( int message_no,int fullmsg,int deleted_messages [])
                 break;
             }
         }
-
     }
     else {
         char line[5000];
-        //  memset(time,0,sizeof(time));
-        //memset(Subject,0,sizeof(Subject));
         memset(line,0,sizeof(line));
         int i=0;
         while(fgets(line,5000,fp))
         {
             if(i==1)
             {
-
                 printf("%s",line);
             }
             else if(i>1)
             {
                 printf("\t\t%s",line);
-
             }
             i++;
-            
         }
-    
     }
-
-
 }
 // add char sender and receiver
 // checks if the syntax is correct
@@ -265,7 +221,6 @@ int validsyntax(char mainbuff[], char String[], int *buffptr, int issubj, char s
             }
             continue;
         }
-        // fflush(stdout);
 
         if (mainbuff[i + *buffptr] == '@')
             at_therate = 1;
@@ -286,7 +241,6 @@ int validsyntax(char mainbuff[], char String[], int *buffptr, int issubj, char s
 
     return 1;
 }
-// function to get al the messgaes from the server
 
 int main(int argc, char *argv[])
 {
@@ -537,21 +491,18 @@ int main(int argc, char *argv[])
             //create a directory to store the messages
             struct stat st = {0};
 
-        if (stat("./mails", &st) == -1) {
-    if(mkdir("./mails", 0777)<0)
-    {
-        perror("Error in creating directory\n");
-        exit(0);
-    
-    };
-        }
+            if (stat("./mail", &st) == -1) {
+                if(mkdir("./mail", 0777)<0)
+                {
+                    perror("Error in creating directory\n");
+                    exit(0);
+                
+                }
+            }
 
             int n_messages = 0;
             int total_size = 0;
 
-            //      strcpy(ip, argv[1]);
-            // int smtp_port = atoi(argv[2]);
-            // int pop3_port = atoi(argv[3]);
             memset(&server, 0, sizeof(server));
             server.sin_family = AF_INET;
             server.sin_addr.s_addr = inet_addr(ip);
@@ -641,7 +592,6 @@ int main(int argc, char *argv[])
                 
                 a = strtok(NULL, " ");
                 a= strtok(NULL, " ");
-                //printf("%d\n",atoi(a));
                 sum += atoi(a);
                 individual_mssg_size[i] = atoi(a);
             }
@@ -665,7 +615,7 @@ int main(int argc, char *argv[])
                 transient_buff[len + 1] = '\n';
                 send(sock, transient_buff, len + 2, 0);
                 int cacheptr = getcrlf(line, transient_buff, 1);
-               // printf("Hello\n");
+
                 char *a;
                 a = strtok(line, " ");
                 if (strcmp(a, "+OK") != 0)
@@ -676,7 +626,7 @@ int main(int argc, char *argv[])
                 // store them in a file
                 FILE *fp;
                 char filename[20];
-                sprintf(filename, "./mails/%d.txt", i);
+                sprintf(filename, "./mail/%d.txt", i);
                 fp = fopen(filename, "w");
                 for (int i = 0; i < cacheptr; i++)
                 {
@@ -699,7 +649,6 @@ int main(int argc, char *argv[])
                 while(mailno!=-1&&mailno>n_messages)
                 {
                     printf("mail out of range give again:");
-                    //printf("Enter mail no: ");
                     scanf("%d",&mailno);
                 }
                 if(mailno==-1)
@@ -708,10 +657,13 @@ int main(int argc, char *argv[])
                     for(int i=1;i<=n_messages;i++)
                     {
                         char filename[20];
-                        sprintf(filename, "./mails/%d.txt", i);
-                        remove(filename);
+                        sprintf(filename, "./mail/%d.txt", i);
+                        if(remove(filename) != 0) {
+                            perror("Error in removing file\n");
+                        }
                     }
-                    rmdir("./mails");
+                    rmdir("./mail");
+                                        
                     //send quit to the server
                     sprintf(transient_buff, "QUIT");
                     len = strlen(transient_buff);
@@ -750,13 +702,7 @@ int main(int argc, char *argv[])
                         }
                         is_deleted_message[mailno]=1;
                     }
-                    else 
-                    {
-                      //  break;
-                    }
                 }
-
-
             }
             if(print_main_menu)
             {
