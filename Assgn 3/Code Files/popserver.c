@@ -5,6 +5,13 @@ Assignment 3: Mail Server and Client
 File: popserver.c
 */
 
+/*
+Instructions for the evaluator:
+- As mentioned in the assignment, you need to add username and password to user.txt .
+  For example: xyz 123
+- Ensure that the user name and password doesn't have any spaces in between.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
