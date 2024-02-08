@@ -229,14 +229,13 @@ int main(int argc, char* argv[]){
             /* TRANSACTION STATE */
             curMailNum = mailNum;
 
-            while(1){
+            while(1){                
+
                 // Receive command
                 recvData(newsockfd, buf, mainBuf, MAX, 0, "STAT", "Error in receiving command\n", "Command not received\n",0);
 
                 // if command is QUIT
                 if(strncmp(mainBuf, "QUIT", 4) == 0){
-                    sprintf(buf, "+OK %s POP3 server signing off\r\n", user);
-                    sendData(newsockfd, buf, 0, "Client closed connection at QUIT\n", "Error in sending QUIT\n");
                     break;
                 }
 
@@ -406,7 +405,7 @@ int main(int argc, char* argv[]){
                 perror("Error in deleting temporary file\n");
                 exit(EXIT_FAILURE);
             }
-            sprintf(buf, "+OK POP3 server signing off (%s messages left)\r\n", mailNum);
+            sprintf(buf, "+OK POP3 server signing off (%d messages left)\r\n", mailNum);
             sendData(newsockfd, buf, 0, "Client closed connection at UPDATE\n", "Error in sending UPDATE\n");
 
             fclose(tempFile);
