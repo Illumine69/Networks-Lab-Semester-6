@@ -15,6 +15,7 @@ File: mailclient.c
 #include <netinet/in.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #define MAX 80
 
@@ -104,6 +105,14 @@ int getcrlf(char cache[], char transient_buff[], int mode)
 void printsummary( int message_no,int fullmsg,int deleted_messages [])
 {
     //check if messgae is present
+
+
+
+    if(message_no<1)
+    {
+        printf("Mail box Empty\n");
+        return;
+    }
 
     FILE *fp;
     char filename[20];
@@ -495,8 +504,13 @@ int main(int argc, char *argv[])
             //create a directory to store the messages
             struct stat st = {0};
 
-        if (stat("/mails", &st) == -1) {
-    mkdir("/mails", 0777);
+        if (stat("./mails", &st) == -1) {
+    if(mkdir("./mails", 777)<0)
+    {
+        perror("Error in creating directory\n");
+        exit(0);
+    
+    };
         }
 
             int n_messages = 0;
@@ -591,7 +605,10 @@ int main(int argc, char *argv[])
                     printf("Error Server Sent: %s\n", line);
                     continue;
                 }
+                
                 a = strtok(NULL, " ");
+                a= strtok(NULL, " ");
+                //printf("%d\n",atoi(a));
                 sum += atoi(a);
                 individual_mssg_size[i] = atoi(a);
             }
@@ -615,6 +632,7 @@ int main(int argc, char *argv[])
                 transient_buff[len + 1] = '\n';
                 send(sock, transient_buff, len + 2, 0);
                 int cacheptr = getcrlf(line, transient_buff, 1);
+                printf("Hello\n");
                 char *a;
                 a = strtok(line, " ");
                 if (strcmp(a, "+OK") != 0)
