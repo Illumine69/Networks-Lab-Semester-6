@@ -195,16 +195,21 @@ int main(int argc, char* argv[]){
             int mailNum = 0;
             int totalMailSize = 0;
            
+            memset(mail, '\0', MAX);
             while(fgets(mail, MAX, userMailbox) != NULL){
                 totalMailSize += (strlen(mail) + 1);
                 if(mail[0] == '.' && mail[1] == '\n'){
                     mailNum++;
                 }
+                memset(mail, '\0', MAX);
             }
+            fclose(userMailbox);
+            userMailbox = fopen(userFileName, "r");
 
             int mailSize[mailNum], curMailNum = 0;
             int curMailSize = 0;
             memset(mailSize, 0, mailNum*sizeof(int));
+            memset(mail, '\0', MAX);
             while(fgets(mail, MAX, userMailbox) != NULL){
                 curMailSize += (strlen(mail) + 1);
                 if(mail[0] == '.' && mail[1] == '\n'){
@@ -212,7 +217,10 @@ int main(int argc, char* argv[]){
                     curMailSize = 0;
                     curMailNum++;
                 }
+                memset(mail, '\0', MAX);
             }
+            fclose(userMailbox);
+            userMailbox = fopen(userFileName, "r");
 
             // Send PASS OK
             sprintf(buf, "+OK %s's maildrop has %d messages (%d octets)\r\n", user, mailNum, totalMailSize);
@@ -288,6 +296,7 @@ int main(int argc, char* argv[]){
 
                         // Send the mail
                         int mailFound = 0;
+                        memset(mail, '\0', MAX);
                         while(fgets(mail, MAX, userMailbox) != NULL){
                             if(mailFound == (num-1)){
                                 mail[strlen(mail) - 1] = '\r';
@@ -301,7 +310,10 @@ int main(int argc, char* argv[]){
                             if(mailFound == num){
                                 break;
                             }
+                            memset(mail, '\0', MAX);
                         }
+                        fclose(userMailbox);
+                        userMailbox = fopen(userFileName, "r");
                     }
                 }
 
@@ -338,6 +350,7 @@ int main(int argc, char* argv[]){
                     curMailSize = 0;
                     totalMailSize = 0;
                     curMailNum = 0;
+                    memset(mail, '\0', MAX);
                     while(fgets(mail, MAX, userMailbox) != NULL){
                         curMailSize += (strlen(mail) + 1);
                         totalMailSize += curMailSize;
@@ -346,7 +359,10 @@ int main(int argc, char* argv[]){
                             curMailSize = 0;
                             curMailNum++;
                         }
+                        memset(mail, '\0', MAX);
                     }
+                    fclose(userMailbox);
+                    userMailbox = fopen(userFileName, "r");
                     
                     sprintf(buf, "+OK maildrop has %d messages (%d octets)\r\n", mailNum, totalMailSize);
                     sendData(newsockfd, buf, 0, "Client closed connection at RSET\n", "Error in sending RSET\n");
@@ -359,8 +375,11 @@ int main(int argc, char* argv[]){
             curMailNum = 0;
 
             // create a temporary file
-            FILE* tempFile = fopen("tempfile", "w+");
+            FILE* tempFile = fopen("tempfile", "w");
+            fclose(userMailbox);
+            userMailbox = fopen(userFileName, "r");
 
+            memset(mail, '\0', MAX);
             while(fgets(mail, MAX, userMailbox) != NULL){
                 if(mailSize[curMailNum] != 0){
                     fprintf(tempFile, "%s", mail);
@@ -368,13 +387,18 @@ int main(int argc, char* argv[]){
                 if(mail[0] == '.' && mail[1] == '\n'){
                     curMailNum++;
                 }
+                memset(mail, '\0', MAX);
             }
 
             // clean the user mailbox
-            userMailbox = fopen(userFileName, "w+");
-
+            fclose(tempFile);
+            tempFile = fopen("tempfile", "r");
+            fclose(userMailbox);
+            userMailbox = fopen(userFileName, "w");
+            memset(mail, '\0', MAX);
             while(fgets(mail, MAX, tempFile) != NULL){
                 fprintf(userMailbox, "%s", mail);
+                memset(mail, '\0', MAX);
             }
 
             // delete the temporary file
