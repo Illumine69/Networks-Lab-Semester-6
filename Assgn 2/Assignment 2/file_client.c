@@ -98,7 +98,7 @@ int main(){
         sprintf(enc_filename, "%s.enc", filename);
 
         // Create the encrypted file
-        if((fp = open(enc_filename, O_RDWR | O_CREAT)) < 0){
+        if((fp = open(enc_filename, O_RDWR | O_CREAT, 0666)) < 0){
             perror("Unable to create file\n");
             exit(0);
         }

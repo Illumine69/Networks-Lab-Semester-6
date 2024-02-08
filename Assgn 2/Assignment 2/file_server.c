@@ -66,7 +66,7 @@ int main(){
             // Create a file to store the received file
             for (int i = 0; i < MAX; i++) filename[i] = '\0';
             sprintf(filename, "%s.%d.txt", inet_ntoa(cli_addr.sin_addr),(int) ntohs(cli_addr.sin_port));
-            int fp = open(filename, O_RDWR | O_CREAT);
+            int fp = open(filename, O_RDWR | O_CREAT, 0666);
             if(fp < 0){
                 perror("Unable to create file\n");
                 exit(0);
@@ -76,7 +76,7 @@ int main(){
             int key;
             recv(newsockfd, &key, sizeof(key), 0);
 
-            // // Receive file from client
+            // Receive file from client
             int n;
             memset(buf, '\0', MAX);
             while((n = recv(newsockfd, buf, MAX, 0)) > 0){
@@ -96,7 +96,7 @@ int main(){
             for (int i = 0; i < MAX; i++) enc_filename[i] = '\0';
             sprintf(enc_filename, "%s.enc", filename);
             
-            int enc_fp = open(enc_filename, O_RDWR | O_CREAT);
+            int enc_fp = open(enc_filename, O_RDWR | O_CREAT, 0666);
             if(enc_fp < 0){
                 perror("Unable to create file\n");
                 exit(0);
