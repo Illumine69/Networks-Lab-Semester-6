@@ -195,16 +195,21 @@ int main(int argc, char* argv[]){
             int mailNum = 0;
             int totalMailSize = 0;
            
+            memset(mail, '\0', MAX);
             while(fgets(mail, MAX, userMailbox) != NULL){
                 totalMailSize += (strlen(mail) + 1);
                 if(mail[0] == '.' && mail[1] == '\n'){
                     mailNum++;
                 }
+                memset(mail, '\0', MAX);
             }
+            fclose(userMailbox);
+            userMailbox = fopen(userFileName, "r");
 
             int mailSize[mailNum], curMailNum = 0;
             int curMailSize = 0;
             memset(mailSize, 0, mailNum*sizeof(int));
+            memset(mail, '\0', MAX);
             while(fgets(mail, MAX, userMailbox) != NULL){
                 curMailSize += (strlen(mail) + 1);
                 if(mail[0] == '.' && mail[1] == '\n'){
@@ -212,7 +217,10 @@ int main(int argc, char* argv[]){
                     curMailSize = 0;
                     curMailNum++;
                 }
+                memset(mail, '\0', MAX);
             }
+            fclose(userMailbox);
+            userMailbox = fopen(userFileName, "r");
 
             // Send PASS OK
             sprintf(buf, "+OK %s's maildrop has %d messages (%d octets)\r\n", user, mailNum, totalMailSize);
@@ -221,14 +229,13 @@ int main(int argc, char* argv[]){
             /* TRANSACTION STATE */
             curMailNum = mailNum;
 
-            while(1){
+            while(1){                
+
                 // Receive command
                 recvData(newsockfd, buf, mainBuf, MAX, 0, "STAT", "Error in receiving command\n", "Command not received\n",0);
 
                 // if command is QUIT
                 if(strncmp(mainBuf, "QUIT", 4) == 0){
-                    sprintf(buf, "+OK %s POP3 server signing off\r\n", user);
-                    sendData(newsockfd, buf, 0, "Client closed connection at QUIT\n", "Error in sending QUIT\n");
                     break;
                 }
 
@@ -288,6 +295,7 @@ int main(int argc, char* argv[]){
 
                         // Send the mail
                         int mailFound = 0;
+                        memset(mail, '\0', MAX);
                         while(fgets(mail, MAX, userMailbox) != NULL){
                             if(mailFound == (num-1)){
                                 mail[strlen(mail) - 1] = '\r';
@@ -301,7 +309,10 @@ int main(int argc, char* argv[]){
                             if(mailFound == num){
                                 break;
                             }
+                            memset(mail, '\0', MAX);
                         }
+                        fclose(userMailbox);
+                        userMailbox = fopen(userFileName, "r");
                     }
                 }
 
@@ -338,6 +349,7 @@ int main(int argc, char* argv[]){
                     curMailSize = 0;
                     totalMailSize = 0;
                     curMailNum = 0;
+                    memset(mail, '\0', MAX);
                     while(fgets(mail, MAX, userMailbox) != NULL){
                         curMailSize += (strlen(mail) + 1);
                         totalMailSize += curMailSize;
@@ -346,7 +358,10 @@ int main(int argc, char* argv[]){
                             curMailSize = 0;
                             curMailNum++;
                         }
+                        memset(mail, '\0', MAX);
                     }
+                    fclose(userMailbox);
+                    userMailbox = fopen(userFileName, "r");
                     
                     sprintf(buf, "+OK maildrop has %d messages (%d octets)\r\n", mailNum, totalMailSize);
                     sendData(newsockfd, buf, 0, "Client closed connection at RSET\n", "Error in sending RSET\n");
@@ -359,8 +374,11 @@ int main(int argc, char* argv[]){
             curMailNum = 0;
 
             // create a temporary file
-            FILE* tempFile = fopen("tempfile", "w+");
+            FILE* tempFile = fopen("tempfile", "w");
+            fclose(userMailbox);
+            userMailbox = fopen(userFileName, "r");
 
+            memset(mail, '\0', MAX);
             while(fgets(mail, MAX, userMailbox) != NULL){
                 if(mailSize[curMailNum] != 0){
                     fprintf(tempFile, "%s", mail);
@@ -368,13 +386,18 @@ int main(int argc, char* argv[]){
                 if(mail[0] == '.' && mail[1] == '\n'){
                     curMailNum++;
                 }
+                memset(mail, '\0', MAX);
             }
 
             // clean the user mailbox
-            userMailbox = fopen(userFileName, "w+");
-
+            fclose(tempFile);
+            tempFile = fopen("tempfile", "r");
+            fclose(userMailbox);
+            userMailbox = fopen(userFileName, "w");
+            memset(mail, '\0', MAX);
             while(fgets(mail, MAX, tempFile) != NULL){
                 fprintf(userMailbox, "%s", mail);
+                memset(mail, '\0', MAX);
             }
 
             // delete the temporary file
@@ -382,7 +405,7 @@ int main(int argc, char* argv[]){
                 perror("Error in deleting temporary file\n");
                 exit(EXIT_FAILURE);
             }
-            sprintf(buf, "+OK POP3 server signing off (%s messages left)\r\n", mailNum);
+            sprintf(buf, "+OK POP3 server signing off (%d messages left)\r\n", mailNum);
             sendData(newsockfd, buf, 0, "Client closed connection at UPDATE\n", "Error in sending UPDATE\n");
 
             fclose(tempFile);
