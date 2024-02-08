@@ -424,8 +424,16 @@ int main(int argc, char *argv[])
             close(sock);
         }
         else if(choice == 1){
-            int n_messages=0;
-            int total_size=0;
+             int n_messages=0;
+             int total_size=0;
+        //      strcpy(ip, argv[1]);
+        // int smtp_port = atoi(argv[2]);
+        // int pop3_port = atoi(argv[3]);
+        memset(&server, 0, sizeof(server));
+         server.sin_family = AF_INET;
+         server.sin_addr.s_addr = inet_addr(ip);
+        server.sin_port = htons(pop3_port);
+
 
             if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
             {
