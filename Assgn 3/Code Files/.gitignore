@@ -3,3 +3,4 @@ mailclient
 smtpmail
 popserver
 *.zip
+.DS_Store
