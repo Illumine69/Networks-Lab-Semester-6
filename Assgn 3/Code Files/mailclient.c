@@ -17,6 +17,7 @@ File: mailclient.c
 #include <sys/stat.h>
 #include <sys/types.h>
 
+
 #define MAX 80
 
 struct sockaddr_in server, client;
@@ -309,7 +310,7 @@ int main(int argc, char *argv[])
             printf("Enter the Message in proper format\n");
 
             int Lineno = 0;
-
+    
             while (1)
             {
 
