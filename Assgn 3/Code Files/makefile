@@ -4,7 +4,7 @@ home: mailclient.c
 
 runclient: mailclient.c
 	gcc -Wall mailclient.c -o mailclient
-	./mailclient 10.145.26.233 24000 32000
+	./mailclient 10.145.51.179 24000 20000
 
 runserver: smtpmail.c
 	gcc -Wall smtpmail.c -o smtpmail
