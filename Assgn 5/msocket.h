@@ -12,14 +12,19 @@
 #define SEND_BUFFER_SIZE 10240
 #define RECV_BUFFER_SIZE 5120
 
+#define  MAX_WINDOW_SIZE 10
+
 struct swnd{
-    int window_size;
-    int unack_msg[5];
+    int send_window_size;//current send window size
+    int last_ack;//last ack received
+    int unack_msg[5];//unacknowledged messages
+    time_t unack_time[5];//time at which the message was sent
 };
 
 struct rwnd{
-    int window_size;
-    int expected_msg[10];
+    int receive_window_size;//current receive window size
+    int last_inorder_msg;//last in-order message received
+    int recv_msg[5];//received messages
 };
 
 struct shared_memory{
