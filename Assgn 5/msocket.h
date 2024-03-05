@@ -5,7 +5,9 @@
 #include <unistd.h>
 #define T 5
 #define p 0.05
+#define N 25
 #define SOCK_MTP SOCK_DGRAM
+#define KEY ftok("/tmp", 'a')
 
 int m_socket(int domain, int type, int protocol);
 int m_bind(int sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen, const struct sockaddr *dest_addr, socklen_t dest_addrlen);
