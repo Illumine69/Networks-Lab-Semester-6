@@ -4,8 +4,40 @@
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 
-int m_socket(int domain, int type, int protocol){}
+int m_socket(int domain, int type, int protocol){
+    int sockfd;
+    if(type != SOCK_MTP){
+        errno = EINVAL;
+        return -1;
+    }
+    if((sockfd = socket(domain, type, protocol)) != -1){     // Successfully created the socket
+
+        key_t key = KEY;
+        int shmid = shmget(key, N*sizeof(struct shared_memory), 0777);
+        struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
+        int free_available = 0;
+        for(int i=0; i<N; i++){
+            if(SM[i].free = 1){
+                free_available = 1;
+                SM[i].free = 0;
+                SM[i].sockfd = sockfd;
+                SM[i].pid = getpid();
+                break;
+            }
+        }
+        if(free_available == 0){
+            errno = ENOBUFS;
+            m_close(sockfd);
+            return -1;
+        }
+        return sockfd;
+    }
+    else{
+        return -1;
+    }
+}
 
 int m_bind(int sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen, const struct sockaddr *dest_addr, socklen_t dest_addrlen){}
 
