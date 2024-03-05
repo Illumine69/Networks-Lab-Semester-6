@@ -9,8 +9,8 @@
 #define SOCK_MTP SOCK_DGRAM
 #define KEY ftok("/tmp", 'a')
 
-#define SEND_BUFFER_SIZE 10240
-#define RECV_BUFFER_SIZE 5120
+#define SEND_BUFFER_SIZE 10
+#define RECV_BUFFER_SIZE 5
 
 #define  MAX_WINDOW_SIZE 10
 
@@ -32,8 +32,8 @@ struct shared_memory{
     int pid;
     int sockfd;
     struct sockaddr_in *addr;
-    char send_buffer[SEND_BUFFER_SIZE];
-    char recv_buffer[RECV_BUFFER_SIZE];
+    char send_buffer[SEND_BUFFER_SIZE][1000];
+    char recv_buffer[RECV_BUFFER_SIZE][1000];
     struct swnd swnd;
     struct rwnd rwnd;
 };
