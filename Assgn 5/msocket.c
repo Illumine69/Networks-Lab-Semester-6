@@ -54,24 +54,42 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
 
 
     //fill the entry in shared memory
+    //before filling do error checking;
+    if(m_sockfd<0 || m_sockfd>=N){
+        errno = EBADF;
+        return -1;
+    }
+    if(SM[m_sockfd].free == 1){
+        errno = EBADF;
+        return -1;
+    }
+    if(SM[m_sockfd].pid!=getpid())
+    {
+        errno =EBADF;
+        return -1;
+    }
     SM[m_sockfd].addr = (struct sockaddr_in *)dest_addr;
     // initialze   the send window
     SM[m_sockfd].swnd.send_window_size=1;
+
     SM[m_sockfd].swnd.last_ack=0;// COZ numbering starrts from 1
+
     memset(SM[m_sockfd].swnd.unack_msg,-1,sizeof(SM[m_sockfd].swnd.unack_msg));
+
     memset(SM[m_sockfd].swnd.unack_time,-1,sizeof(SM[m_sockfd].swnd.unack_time));
+    
     // initialze   the receive window
     SM[m_sockfd].rwnd.receive_window_size=MAX_WINDOW_SIZE;
-    SM[m_sockfd].rwnd.last_inorder_msg=0;// COZ numbering starrts from 1
+
+    SM[m_sockfd].rwnd.last_inorder_msg=0;// COZ numbering starts from 1
+
     memset(SM[m_sockfd].rwnd.recv_msg,-1,sizeof(SM[m_sockfd].rwnd.recv_msg));
     // call the system bind call
     
     int res =bind(SM[m_sockfd].sockfd, src_addr, src_addrlen);
 
-
-
     //unlock the shared memory
-   
+
 
     //deatch from shared memory
     shmdt(SM);
@@ -79,12 +97,6 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
 
 
      return res;
-
-    
-
-
-
-
 }
 
 ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_addrlen){}
