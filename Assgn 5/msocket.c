@@ -5,6 +5,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+//#include<netinet/in.h>
+//#include<arpa/inet.h>
+#include<netdb.h>
 
 int m_socket(int domain, int type, int protocol){
     int sockfd;
@@ -17,6 +20,12 @@ int m_socket(int domain, int type, int protocol){
         key_t key = KEY;
         int shmid = shmget(key, N*sizeof(struct shared_memory), 0777);
         struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
+        if(SM==NULL){
+            errno = ENOMEM;
+            printf("Init process not called \n");
+            close(sockfd);
+            return -1;
+        }
         int free_available = 0;
         int m_sockfd;
         for(int i=0; i<N; i++){
@@ -43,13 +52,11 @@ int m_socket(int domain, int type, int protocol){
 
 int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen, const struct sockaddr *dest_addr, socklen_t dest_addrlen){
 
-
     //initialze the buff?
     key_t key = KEY;
     int shmid = shmget(key, N*sizeof(struct shared_memory), 0777);
     struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
    
-
     //lock the shared memory ? not required as only this process is aceesing when m_bind is in progress
 
 
@@ -77,7 +84,7 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
     memset(SM[m_sockfd].swnd.unack_msg,-1,sizeof(SM[m_sockfd].swnd.unack_msg));
 
     memset(SM[m_sockfd].swnd.unack_time,-1,sizeof(SM[m_sockfd].swnd.unack_time));
-    
+
     // initialze   the receive window
     SM[m_sockfd].rwnd.receive_window_size=MAX_WINDOW_SIZE;
 
@@ -99,9 +106,60 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
      return res;
 }
 
-ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_addrlen){}
 
-ssize_t m_recvfrom(int m_sockfd, void *restrict buffer, size_t length, int flags, struct sockaddr *restrict address, socklen_t *restrict address_len){}
+// set the correct errno
+ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_addrlen){
+    //first attach to shared memory
+
+    //need to use mutexes
+    key_t key = KEY;
+
+    int shmid=shmget(key,N*sizeof(struct shared_memory),0777);
+    struct shared_memory *SM = (struct shared_memory *)shmat(shmid,NULL,0);
+    //error checking
+    if(SM==NULL){
+        errno = ENOMEM;
+        printf("Init process not called \n");
+        return -1;
+    }
+    if(m_sockfd<0 || m_sockfd>=N){
+        errno = EBADF;
+        return -1;
+    }
+    if(SM[m_sockfd].free == 1){
+        errno = EBADF;
+        return -1;
+    }
+    if(SM[m_sockfd].pid!=getpid())
+    {
+        errno =EBADF;
+        return -1;
+    }
+    //check if port and ip are same
+    if( (SM[m_sockfd].addr->sin_port != ((struct sockaddr_in *)dest_addr)->sin_port) || (SM[m_sockfd].addr->sin_addr.s_addr != ((struct sockaddr_in *)dest_addr)->sin_addr.s_addr) ){
+        //errno = ENOTBOUND;
+        //set the correct errno;
+        printf("Port and IP are not same\n");
+        return -1;
+    }
+    //check if send window is full
+    if(SM[m_sockfd].swnd.send_window_size == 0){
+        errno = ENOBUFS;
+        return -1;
+    }
+    
+
+
+
+
+
+}
+
+ssize_t m_recvfrom(int m_sockfd, void *restrict buffer, size_t length, int flags, struct sockaddr *restrict address, socklen_t *restrict address_len){
+
+
+
+}
 
 int m_close(int m_sockfd){
     int res;
