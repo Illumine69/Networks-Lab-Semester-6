@@ -39,7 +39,27 @@ int m_socket(int domain, int type, int protocol){
     }
 }
 
-int m_bind(int sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen, const struct sockaddr *dest_addr, socklen_t dest_addrlen){}
+int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen, const struct sockaddr *dest_addr, socklen_t dest_addrlen){
+    key_t key = KEY;
+    int shmid = shmget(key, N*sizeof(struct shared_memory), 0777);
+    struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
+    //find a free entry in shared memory
+
+    //lock the shared memory
+
+
+    //fill the entry in shared memory
+    SM[m_sockfd].addr = (struct sockaddr_in *)dest_addr;
+
+
+
+    //deatch from shared memory
+    
+
+
+
+
+}
 
 ssize_t m_sendto(int sockfd, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_addrlen){}
 
