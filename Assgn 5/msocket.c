@@ -8,6 +8,13 @@
 //#include<netinet/in.h>
 //#include<arpa/inet.h>
 #include<netdb.h>
+/*
+1) Avoid using strcpy just blindly copy since messages are of fixed (1000) bytes 
+2) Dereferencing void * into char --> *((char *)(ptr))
+2) Mutexes not included to be taken care later 
+3) didnt set one of the errors in m_bind
+
+*/
 
 int m_socket(int domain, int type, int protocol){
     int sockfd;
@@ -142,12 +149,45 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
         printf("Port and IP are not same\n");
         return -1;
     }
-    //check if send window is full
-    if(SM[m_sockfd].swnd.send_window_size == 0){
+    // bruh send error if buf is not available not if window size is 0
+    // if(SM[m_sockfd].swnd.send_window_size == 0){
+    //     errno = ENOBUFS;
+    //     return -1;
+    // }
+    if(!SM[m_sockfd].swnd.rem_buff_space)
+    {
         errno = ENOBUFS;
         return -1;
     }
-    
+    //you would need to initiliaze the buffer with charecters that are not used in usual messages
+    for(int i=0;i<SEND_BUFFER_SIZE;i++)
+    {
+        if(SM[m_sockfd].send_buffer[i][0]=='\r' && SM[m_sockfd].send_buffer[i][1]=='\n' )
+        {
+            // you are assuming each message is of length 1000
+            // blindly copy
+            for(int j=0;j<1000;j++)
+            {
+                SM[m_sockfd].send_buffer[i][j]= *((char *)message+j);
+            }
+            //Karthik left work here 
+
+
+
+
+            SM[m_sockfd].swnd.unack_msg[SM[m_sockfd].swnd.last_sent]=i;
+            SM[m_sockfd].swnd.unack_time[SM[m_sockfd].swnd.last_sent]=time(NULL);
+            SM[m_sockfd].swnd.last_sent=(SM[m_sockfd].swnd.last_sent+1)%5;
+            SM[m_sockfd].swnd.send_window_size--;
+            SM[m_sockfd].swnd.rem_buff_space--;
+            break;
+        }
+    }
+
+
+    // who adds the header is it S or this function ?
+
+
 
 
 

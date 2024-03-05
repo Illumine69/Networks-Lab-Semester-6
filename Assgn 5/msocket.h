@@ -18,7 +18,10 @@ struct swnd{
     int send_window_size;           //current send window size
     int last_ack;                   //last ack received
     int unack_msg[5];               //unacknowledged messages
-    time_t unack_time[5];           //time at which the message was sent
+    time_t unack_time[5]; 
+    int rem_buff_space;
+    int last_sent;                  //last sent message
+  //time at which the message was sent
 };
 
 struct rwnd{
