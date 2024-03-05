@@ -18,21 +18,23 @@ int m_socket(int domain, int type, int protocol){
         int shmid = shmget(key, N*sizeof(struct shared_memory), 0777);
         struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
         int free_available = 0;
+        int m_sockfd;
         for(int i=0; i<N; i++){
             if(SM[i].free = 1){
                 free_available = 1;
                 SM[i].free = 0;
                 SM[i].sockfd = sockfd;
                 SM[i].pid = getpid();
+                m_sockfd = i;
                 break;
             }
         }
         if(free_available == 0){
             errno = ENOBUFS;
-            m_close(sockfd);
+            close(sockfd);
             return -1;
         }
-        return sockfd;
+        return m_sockfd;
     }
     else{
         return -1;
@@ -61,26 +63,30 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
 
 }
 
-ssize_t m_sendto(int sockfd, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_addrlen){}
+ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_addrlen){}
 
-ssize_t m_recvfrom(int sockfd, void *restrict buffer, size_t length, int flags, struct sockaddr *restrict address, socklen_t *restrict address_len){}
+ssize_t m_recvfrom(int m_sockfd, void *restrict buffer, size_t length, int flags, struct sockaddr *restrict address, socklen_t *restrict address_len){}
 
-int m_close(int fd){
+int m_close(int m_sockfd){
     int res;
-    if((res = close(fd)) == 0){     // Successfully closed the socket
+    key_t key = KEY;
+    int shmid = shmget(key, N*sizeof(struct shared_memory), 0777);
+    struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
 
-        // Clean the entry in shared memory
-        key_t key = KEY;
-        int shmid = shmget(key, N*sizeof(struct shared_memory), 0777);
-        struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
-
-        for(int i = 0;i < N;i++){
-            if(SM[i].sockfd == fd){
-                memset(&SM[i], NULL, sizeof(struct shared_memory));
-                SM[i].free = 1;
-            }
+    if(SM[m_sockfd].free == 0){
+        int sockfd = SM[m_sockfd].sockfd;
+        if((res = close(sockfd)) != 0){
+            shmdt(SM);
+            return -1;
         }
+        memset(&SM[m_sockfd], NULL, sizeof(struct shared_memory));
+        SM[m_sockfd].free = 1;
     }
+    else{
+        errno = EBADF;
+        res = -1;
+    }
+    shmdt(SM);
     return res;
 }
 
