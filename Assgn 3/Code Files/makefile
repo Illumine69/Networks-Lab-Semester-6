@@ -15,4 +15,4 @@ runpop: popserver.c
 	./popserver 32000
 
 clean:
-	rm mailclient smtpmail
+	rm mailclient smtpmail popserver
