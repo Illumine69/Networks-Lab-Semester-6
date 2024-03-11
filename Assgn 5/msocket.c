@@ -22,39 +22,36 @@ int m_socket(int domain, int type, int protocol){
         errno = EINVAL;
         return -1;
     }
-    if((sockfd = socket(domain, type, protocol)) != -1){     // Successfully created the socket
-
-        key_t key = KEY;
-        int shmid = shmget(key, N*sizeof(struct shared_memory), 0777);
-        struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
-        if(SM==NULL){
-            errno = ENOMEM;
-            printf("Init process not called \n");
-            close(sockfd);
-            return -1;
-        }
-        int free_available = 0;
-        int m_sockfd;
-        for(int i=0; i<N; i++){
-            if(SM[i].free = 1){
-                free_available = 1;
-                SM[i].free = 0;
-                SM[i].sockfd = sockfd;
-                SM[i].pid = getpid();
-                m_sockfd = i;
-                break;
-            }
-        }
-        if(free_available == 0){
-            errno = ENOBUFS;
-            close(sockfd);
-            return -1;
-        }
-        return m_sockfd;
-    }
-    else{
+    key_t key = KEY;
+    int shmid = shmget(key, N*sizeof(struct shared_memory), 0777);
+    struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
+    if(SM==NULL){
+        errno = ENOMEM;
+        printf("Init process not called \n");
+        close(sockfd);
         return -1;
     }
+    int free_available = 0;
+    int m_sockfd;
+    for(int i=0; i<N; i++){
+        if(SM[i].free = 1){
+            if((sockfd = socket(domain, type, protocol)) == -1){
+                shmdt(SM);
+                return -1;
+            }
+            free_available = 1;
+            SM[i].free = 0;
+            SM[i].sockfd = sockfd;
+            SM[i].pid = getpid();
+            m_sockfd = i;
+            break;
+        }
+    }
+    if(free_available == 0){
+        errno = ENOBUFS;
+        return -1;
+    }
+    return m_sockfd;
 }
 
 int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen, const struct sockaddr *dest_addr, socklen_t dest_addrlen){
@@ -201,7 +198,42 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
 
 ssize_t m_recvfrom(int m_sockfd, void *restrict buffer, size_t length, int flags, struct sockaddr *restrict address, socklen_t *restrict address_len){
 
+    //first attach to shared memory
+    key_t key = KEY;
+    int shmid=shmget(key,N*sizeof(struct shared_memory),0777);
+    struct shared_memory *SM = (struct shared_memory *)shmat(shmid,NULL,0);
 
+    //error checking
+    if(SM==NULL){
+        errno = ENOMEM;
+        printf("Init process not called \n");
+        return -1;
+    }
+
+    // If the socket is free
+    if(SM[m_sockfd].free == 1){
+        errno = EBADF;
+        return -1;
+    }
+
+    for(int i=0;i<RECV_BUFFER_SIZE;i++){
+        // Assuming that the R process stores only the actual message in the Receive buffer ending with <crlf>
+        if(SM[m_sockfd].recv_buffer[i][0]!='\r' && SM[m_sockfd].recv_buffer[i][1]!='\n'){
+            int j = 0;
+            while(SM[m_sockfd].recv_buffer[i][j]!='\r' && SM[m_sockfd].recv_buffer[i][j+1]!='\n'){
+                *((char *)buffer+j) = SM[m_sockfd].recv_buffer[i][j];
+                j++;
+            }
+            memset(SM[m_sockfd].recv_buffer[i],'\0',1000);
+            SM[m_sockfd].recv_buffer[i][0]='\r';
+            SM[m_sockfd].recv_buffer[i][1]='\n';
+            shmdt(SM);
+            return j;
+        }
+    }
+    shmdt(SM);
+    errno = ENOMSG;
+    return -1;
 
 }
 

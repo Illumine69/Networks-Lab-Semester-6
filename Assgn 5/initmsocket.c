@@ -12,7 +12,10 @@ void* R(void* params){}
 void* S(void* params){}
 
 int main(){
-    pthread_t rid, sid;
+    pthread_t rid , sid;
+    pthread_attr_t r_attr, s_attr;
+    pthread_attr_init(&r_attr);
+    pthread_attr_init(&s_attr);
     struct shared_memory *SM;
     int shmid;
     key_t key = KEY;
@@ -20,8 +23,11 @@ int main(){
 
 
     pthread_create(&rid, NULL, R, NULL);
+    pthread_detach(rid);
     pthread_create(&sid, NULL, S, NULL);
+    pthread_detach(sid);
 
-    pthread_join(rid, NULL);
-    pthread_join(sid, NULL);
+    while(1){   // Garbage collector process
+
+    }
 }
