@@ -173,12 +173,16 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
             //Karthik left work here 
 
 
+            // you shouldnt decreasing the window size here
+            // you should decrease the window size only after the message is sent
+
+
 
 
             SM[m_sockfd].swnd.unack_msg[SM[m_sockfd].swnd.last_sent]=i;
             SM[m_sockfd].swnd.unack_time[SM[m_sockfd].swnd.last_sent]=time(NULL);
             SM[m_sockfd].swnd.last_sent=(SM[m_sockfd].swnd.last_sent+1)%5;
-            SM[m_sockfd].swnd.send_window_size--;
+            //SM[m_sockfd].swnd.send_window_size--;
             SM[m_sockfd].swnd.rem_buff_space--;
             break;
         }
