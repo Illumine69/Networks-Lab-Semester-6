@@ -10,7 +10,7 @@
 #include<netdb.h>
 /*
 1) Avoid using strcpy just blindly copy since messages are of fixed (1000) bytes 
-2) Dereferencing void * into char --> *((char *)(ptr))
+2)(wrong and ignore) Dereferencing void * into char --> *((char *)(ptr)) 
 2) Mutexes not included to be taken care later 
 3) didnt set one of the errors in m_bind
 
