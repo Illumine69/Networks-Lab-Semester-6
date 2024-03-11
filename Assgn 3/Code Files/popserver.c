@@ -79,7 +79,7 @@ int main(int argc, char* argv[]){
     int sockfd, newsockfd;
     int clilen;
     struct sockaddr_in cli_addr, serv_addr;
-
+    
     // Opening a socket
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
         perror("Cannot create socket\n");

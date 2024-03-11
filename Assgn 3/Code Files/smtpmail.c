@@ -291,7 +291,7 @@ int main(int argc, char* argv[]){
                 mail[j++] = mainBuf[i];
                 printf("%c",mainBuf[i]);
             }
-
+            
             write(mymailbox, mail, j);
 
             // Acknowledge mail and send OK

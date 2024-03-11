@@ -524,7 +524,7 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
 
-            // first recevie the hello message from the server
+            // first receive the hello message from the server
             getcrlf(line, transient_buff, 0);
             char *a = strtok(line, " ");
             if (strcmp(a, "+OK") != 0)
