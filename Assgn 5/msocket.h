@@ -15,13 +15,21 @@
 #define  MAX_WINDOW_SIZE 10
 
 struct swnd{
+
+
+
+    // chose to implemet circular buffer
     int send_window_size;           //current send window size
-    int last_ack;                   //last ack received
-    int unack_msg[5];               //unacknowledged messages
-    time_t unack_time[5]; 
+    //int last_ack;                   //last ack received
+   // int unack_msg[5];               //unacknowledged messages
+    time_t unack_time[10]; 
     int rem_buff_space;
-    int last_sent;                  //last sent message
+    //int last_sent;                  //last sent message
   //time at which the message was sent
+  int start_index;//start index in the buffer 
+  int last_sent_index;//last sent messages index in the buffer
+    int end_index;//end index in the buffer
+    int start_index_ack_no;//ack no of the start index
 };
 
 struct rwnd{

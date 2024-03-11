@@ -83,9 +83,15 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
     // initialze   the send window
     SM[m_sockfd].swnd.send_window_size=1;
 
-    SM[m_sockfd].swnd.last_ack=0;// COZ numbering starrts from 1
+    //SM[m_sockfd].swnd.last_ack=0;// COZ numbering starrts from 1
+    SM[m_sockfd].swnd.rem_buff_space=SEND_BUFFER_SIZE;
+    SM[m_sockfd].swnd.start_index=0;
+    SM[m_sockfd].swnd.end_index=0;
+    SM[m_sockfd].swnd.start_index_ack_no=0;
+    SM[m_sockfd].swnd.last_sent_index=0;
+    
 
-    memset(SM[m_sockfd].swnd.unack_msg,-1,sizeof(SM[m_sockfd].swnd.unack_msg));
+    // memset(SM[m_sockfd].swnd.unack_msg,-1,sizeof(SM[m_sockfd].swnd.unack_msg));
 
     memset(SM[m_sockfd].swnd.unack_time,-1,sizeof(SM[m_sockfd].swnd.unack_time));
 
@@ -151,42 +157,27 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
     //     errno = ENOBUFS;
     //     return -1;
     // }
-    if(!SM[m_sockfd].swnd.rem_buff_space)
-    {
+    // if(!SM[m_sockfd].swnd.rem_buff_space)
+    // {
+    //     errno = ENOBUFS;
+    //     return -1;
+    // }
+    //check if the buffer is full
+    if(SM[m_sockfd].swnd.start_index == (SM[m_sockfd].swnd.end_index+1)%SEND_BUFFER_SIZE){
         errno = ENOBUFS;
         return -1;
     }
-    //you would need to initiliaze the buffer with charecters that are not used in usual messages
-    for(int i=0;i<SEND_BUFFER_SIZE;i++)
-    {
-        if(SM[m_sockfd].send_buffer[i][0]=='\r' && SM[m_sockfd].send_buffer[i][1]=='\n' )
-        {
-            // you are assuming each message is of length 1000
-            // blindly copy
-            for(int j=0;j<1000;j++)
-            {
-                SM[m_sockfd].send_buffer[i][j]= *((char *)message+j);
-            }
-            //Karthik left work here 
-
-
-            // you shouldnt decreasing the window size here
-            // you should decrease the window size only after the message is sent
-
-
-
-
-            SM[m_sockfd].swnd.unack_msg[SM[m_sockfd].swnd.last_sent]=i;
-            SM[m_sockfd].swnd.unack_time[SM[m_sockfd].swnd.last_sent]=time(NULL);
-            SM[m_sockfd].swnd.last_sent=(SM[m_sockfd].swnd.last_sent+1)%5;
-            //SM[m_sockfd].swnd.send_window_size--;
-            SM[m_sockfd].swnd.rem_buff_space--;
-            break;
-        }
+    // incrment the end index
+    SM[m_sockfd].swnd.end_index = (SM[m_sockfd].swnd.end_index+1)%SEND_BUFFER_SIZE;
+    //copy the message to the buffer
+    for(int i=0;i<length;i++){
+        SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i] = ((char )(message+i));
     }
+    
 
 
     // who adds the header is it S or this function ?
+    // it is s who adds the header
 
 
 
@@ -195,6 +186,7 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
 
 
 }
+
 
 ssize_t m_recvfrom(int m_sockfd, void *restrict buffer, size_t length, int flags, struct sockaddr *restrict address, socklen_t *restrict address_len){
 
