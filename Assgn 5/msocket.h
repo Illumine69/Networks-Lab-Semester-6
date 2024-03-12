@@ -8,6 +8,9 @@
 #define N 25
 #define SOCK_MTP SOCK_DGRAM
 #define KEY ftok("/tmp", 'a')
+#define SEM1_KEY ftok("/sem", 'a')
+#define SEM2_KEY ftok("/sem", 'b')
+#define SOCK_INFO_KEY ftok("/sockinfo", 'a')
 
 #define SEND_BUFFER_SIZE 10
 #define RECV_BUFFER_SIZE 5
