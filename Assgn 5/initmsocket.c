@@ -25,15 +25,47 @@ struct SOCKINFO{
 };
 
 
+struct shared_memory *SM;
+
 void* R(void* params){}
 
-void* S(void* params){}
+void* S(void* params){
+    while(1){
+        sleep(T/3);
+        // nanosleep(10000000)  // if p is set to 0
+        time_t cur_time = time(NULL);
 
-void* G(void* params){}
+        // Transmit timedout messages
+        for(int i = 0;i < N; i++){
+            if(SM[i].free == 0){
+                // check if T < cur_time - (time when last messages within window were sent)
+                // If yes, retransmit all messagtes with the swnd
+                // Use the sendto function here for all such messages
+                
+            }
+        }
+
+        // Transmit new messages
+        for(int i = 0;i < N; i++){
+            if(SM[i].free == 0){
+                // check if the sender buffer has message to send
+                // If yes, transmit the new messages
+                // Use the sendto function here for all such messages
+            }
+        }
+    }
+}
+
+void* G(void* params){
+    while(1){
+        // Clean up the shared memory for killed process
+        // How to find if a process has been killed?
+    }
+}
 
 int main(){
     struct sembuf pop, vop ;
-     key_t sem1_key = SEM1_KEY;
+    key_t sem1_key = SEM1_KEY;
     key_t sem2_key = SEM2_KEY;
     int sem1 = semget(sem1_key, 1, 0777);
     int sem2 = semget(sem2_key, 1, 0777);
@@ -50,12 +82,11 @@ int main(){
 
 
 
-    struct shared_memory *SM;
     int shmid;
     key_t key = KEY;
     shmid = shmget(key, N*sizeof(struct shared_memory), 0777);
 
-     pthread_t rid , sid, gid;
+    pthread_t rid , sid, gid;
     pthread_attr_t r_attr, s_attr,g_attr;
     pthread_attr_init(&r_attr);
     pthread_attr_init(&s_attr);
