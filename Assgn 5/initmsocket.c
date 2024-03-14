@@ -54,8 +54,10 @@ void *S(void *params)
                 // iterate from start_index to last_sent_index
 
 
-                // j is basically the length not index by design
-                for (int j = SM[i].swnd.start_index; (j-SM[i].swnd.start_index+SEND_BUFFER_SIZE)%(SEND_BUFFER_SIZE) <= SM[i].swnd.last_sent_index; j++)
+                // j is basically circular 
+                // for (int j = SM[i].swnd.start_index; (j+SEND_BUFFER_SIZE)%(SEND_BUFFER_SIZE) <= SM[i].swnd.last_sent_index; j++)
+                int j = SM[i].swnd.start_index;
+                while(j != (SM[i].swnd.last_sent_index+1)%SEND_BUFFER_SIZE)
                 {
                     // if (SM[i].swnd.unack_time[j] + T < time(NULL))
                     // {
@@ -76,13 +78,13 @@ void *S(void *params)
                     //send all the messages from start_index to last_sent_index
                     //dont check the time
 
-                      sprintf(send_buffer, "0$%d$%d$%d$$$", SM[i].addr->sin_addr.s_addr, SM[i].addr->sin_port,(SM[i].swnd.start_index_ack_no +(j))% MAX_SEQ_NUM + 1);
+                      sprintf(send_buffer, "0$%d$%d$%d$$$", SM[i].addr->sin_addr.s_addr, SM[i].addr->sin_port,(SM[i].swnd.start_index_ack_no +(j-SM[i].swnd.start_index+SEND_BUFFER_SIZE)%(SEND_BUFFER_SIZE))% MAX_SEQ_NUM + 1);
                     
 
                         int len = strlen(send_buffer);
                         for(int k = 0; k < 1000; k++)
                         {
-                             send_buffer[len + k] = SM[i].send_buffer[(j-SM[i].swnd.start_index+MAX_BUFFER_SIZE)%MAX_BUFFER_SIZE][k];
+                             send_buffer[len + k] = SM[i].send_buffer[(j-SM[i].swnd.start_index+SEND_BUFFER_SIZE)%SEND_BUFFER_SIZE][k];
                         }
                         
                         if (sendto(SM[i].sockfd, send_buffer, len+1000, 0, (struct sockaddr *)SM[i].addr, sizeof(struct sockaddr_in)) < 0)
@@ -95,7 +97,7 @@ void *S(void *params)
                             perror("Error in thread while attempting to send to the socket");
                             break;
                         }
-                    
+                    j = (j+1)%SEND_BUFFER_SIZE;
                 }
             }
         }
