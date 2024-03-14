@@ -22,6 +22,13 @@ char send_buffer[1500];
 void *R(void *params)
 {
     // receiver process
+    // should use slect call with timer 
+
+    while(1)
+    {
+        
+        
+    }
 }
 
 void *S(void *params)
@@ -39,7 +46,7 @@ void *S(void *params)
     while (1)
     {
         // sleep for <T/2 seconds
-        sleep(T / 2 - 1);
+        sleep(T / 3);
         P(sem_sm_key);
         for (int i = 0; i < N; i++)
         {
