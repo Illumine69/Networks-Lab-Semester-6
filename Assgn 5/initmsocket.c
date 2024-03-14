@@ -32,15 +32,17 @@ void* S(void* params){
     while(1){
         sleep(T/3);
         // nanosleep(10000000)  // if p is set to 0
-        time_t cur_time = time(NULL);
 
         // Transmit timedout messages
         for(int i = 0;i < N; i++){
             if(SM[i].free == 0){
-                // check if T < cur_time - (time when last messages within window were sent)
-                // If yes, retransmit all messagtes with the swnd
+                time_t cur_time = time(NULL);
+                time_t msg_time = SM[i].swnd.unack_time[SM[i].swnd.start_index];    //(time when last messages within window were sent))
+                if (T < (cur_time - msg_time)){
+                // retransmit all messagtes with the swnd
                 // Use the sendto function here for all such messages
-                
+                    
+                }
             }
         }
 
