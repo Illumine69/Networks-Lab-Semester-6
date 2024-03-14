@@ -4,7 +4,7 @@
 #include <sys/socket.h>
 #include <sys/shm.h>
 #include <sys/ipc.h>
-#include "msocket.h"
+#include <msocket.h>
 #include <sys/sem.h>
 
 #define P(s) semop(s, &pop, 1)  /* pop is the structure we pass for doing
@@ -18,14 +18,13 @@ creating struct sockinfo
 */
 
 struct SOCKINFO{
-    int sockinfo;
+    int sock_id;
     // ip address
     struct sockaddr_in *addr;
     int errno;
 };
 
 
-struct shared_memory *SM;
 
 void* R(void* params){}
 
@@ -80,7 +79,7 @@ int main(){
     int sock_info = shmget(sock_info_key, sizeof(struct SOCKINFO), 0777);
     struct SOCKINFO *sockinfo = (struct SOCKINFO *)shmat(sock_info, 0, 0);
 
-
+    struct shared_memory *SM;
 
     int shmid;
     key_t key = KEY;
@@ -111,7 +110,7 @@ int main(){
         P(sem1);
         // do stuff here 
 
-        if(!(sockinfo->sockinfo))
+        if(!(sockinfo->sockid))
         {
             //call socket here 
             
