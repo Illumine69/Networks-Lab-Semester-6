@@ -3,6 +3,8 @@
 
 #include <sys/socket.h>
 #include <unistd.h>
+#include <sys/shm.h>
+#include<sys/sem.h>
 #define T 5
 #define p 0.05
 #define N 25
@@ -11,16 +13,38 @@
 #define SEM1_KEY ftok("/sem", 'a')
 #define SEM2_KEY ftok("/sem", 'b')
 #define SOCK_INFO_KEY ftok("/sockinfo", 'a')
+#define SEM_SM_KEY ftok("/sem_sm", 'a')
+#define P(s) semop(s, &pop, 1)  /* pop is the structure we pass for doing
+				   the P(s) operation */
+#define V(s) semop(s, &vop, 1)  /* vop is the structure we pass for doing
+				   the V(s) operation */
 
 #define SEND_BUFFER_SIZE 10
 #define RECV_BUFFER_SIZE 5
 
-#define  MAX_WINDOW_SIZE 10
+#define  MAX_WINDOW_SIZE 10 //define this properly what should be the max window size ?? this should be less than than the buffer size and also the no of bits in the sequence number
+
+// let say your sequence numbers vary from 01 to 15 
+
+#define MAX_SEQ_NUM 15 // you need to use %15 +1 to get the next sequence number
+
+
+//header syntax ::
+
+// Type field (0/1)$Destip$port$Sequence Number$Ack Number$Window Size$Data
+
+// 0 for data and 1 for ack
+
+
+
+struct SOCKINFO{
+    int sockinfo;
+    // ip address
+    struct sockaddr_in *addr;
+    int error_no;
+};
 
 struct swnd{
-
-
-
     // chose to implemet circular buffer
     int send_window_size;           //current send window size
     //int last_ack;                   //last ack received
@@ -33,6 +57,7 @@ struct swnd{
   int last_sent_index;//last sent messages index in the buffer
     int end_index;//end index in the buffer
     int start_index_ack_no;//ack no of the start index
+    int last_sent_ack_no;//ack no of the last sent index
 };
 
 struct rwnd{

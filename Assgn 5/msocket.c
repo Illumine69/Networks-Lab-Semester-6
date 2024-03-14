@@ -1,259 +1,235 @@
-#include "msocket.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
 #include <sys/socket.h>
 #include <sys/shm.h>
-#include <time.h>
-#include <string.h>
-#include <stdlib.h>
+#include <sys/ipc.h>
+#include "msocket.h"
+#include <sys/sem.h>
+#include <sys/types.h>
 #include <errno.h>
-//#include<netinet/in.h>
-//#include<arpa/inet.h>
-#include<netdb.h>
-/*
-1) Avoid using strcpy just blindly copy since messages are of fixed (1000) bytes 
-2)(wrong and ignore) Dereferencing void * into char --> *((char *)(ptr)) 
-2) Mutexes not included to be taken care later 
-3) didnt set one of the errors in m_bind
+#include <netinet/in.h>
 
-*/
+// create a mutex (semaphore )for the whole share memory
 
-int m_socket(int domain, int type, int protocol){
-    int sockfd;
-    if(type != SOCK_MTP){
-        errno = EINVAL;
-        return -1;
-    }
-    key_t key = KEY;
-    int shmid = shmget(key, N*sizeof(struct shared_memory), 0777);
-    struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
-    if(SM==NULL){
-        errno = ENOMEM;
-        printf("Init process not called \n");
-        close(sockfd);
-        return -1;
-    }
-    int free_available = 0;
-    int m_sockfd;
-    for(int i=0; i<N; i++){
-        if(SM[i].free = 1){
-            if((sockfd = socket(domain, type, protocol)) == -1){
-                shmdt(SM);
-                return -1;
-            }
-            free_available = 1;
-            SM[i].free = 0;
-            SM[i].sockfd = sockfd;
-            SM[i].pid = getpid();
-            m_sockfd = i;
-            break;
-        }
-    }
-    if(free_available == 0){
-        errno = ENOBUFS;
-        return -1;
-    }
-    return m_sockfd;
+
+key_t sem_sm_key;
+
+struct shared_memory *SM;
+
+char send_buffer[1500];
+
+void *R(void *params)
+{
+    // receiver process
 }
 
-int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen, const struct sockaddr *dest_addr, socklen_t dest_addrlen){
+void *S(void *params)
+{
+    // sender process
 
-    //initialze the buff?
-    key_t key = KEY;
-    int shmid = shmget(key, N*sizeof(struct shared_memory), 0777);
-    struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
-   
-    //lock the shared memory ? not required as only this process is aceesing when m_bind is in progress
+    // should you implement a per SM semaphore or per index semaphore for SM?// choose the easy way
 
+    struct sembuf pop, vop;
+    pop.sem_num = vop.sem_num = 0;
+    pop.sem_flg = vop.sem_flg = 0;
+    pop.sem_op = -1;
+    vop.sem_op = 1;
 
-    //fill the entry in shared memory
-    //before filling do error checking;
-    if(m_sockfd<0 || m_sockfd>=N){
-        errno = EBADF;
-        return -1;
-    }
-    if(SM[m_sockfd].free == 1){
-        errno = EBADF;
-        return -1;
-    }
-    if(SM[m_sockfd].pid!=getpid())
+    while (1)
     {
-        errno =EBADF;
-        return -1;
-    }
-    SM[m_sockfd].addr = (struct sockaddr_in *)dest_addr;
-    // initialze   the send window
-    SM[m_sockfd].swnd.send_window_size=1;
-
-    //SM[m_sockfd].swnd.last_ack=0;// COZ numbering starrts from 1
-    SM[m_sockfd].swnd.rem_buff_space=SEND_BUFFER_SIZE;
-    SM[m_sockfd].swnd.start_index=0;
-    SM[m_sockfd].swnd.end_index=0;
-    SM[m_sockfd].swnd.start_index_ack_no=0;
-    SM[m_sockfd].swnd.last_sent_index=0;
-    
-
-    // memset(SM[m_sockfd].swnd.unack_msg,-1,sizeof(SM[m_sockfd].swnd.unack_msg));
-
-    memset(SM[m_sockfd].swnd.unack_time,-1,sizeof(SM[m_sockfd].swnd.unack_time));
-
-    // initialze   the receive window
-    SM[m_sockfd].rwnd.receive_window_size=MAX_WINDOW_SIZE;
-
-    SM[m_sockfd].rwnd.last_inorder_msg=0;// COZ numbering starts from 1
-
-    memset(SM[m_sockfd].rwnd.recv_msg,-1,sizeof(SM[m_sockfd].rwnd.recv_msg));
-    // call the system bind call
-    
-    int res =bind(SM[m_sockfd].sockfd, src_addr, src_addrlen);
-
-    //unlock the shared memory
+        // sleep for <T/2 seconds
+        sleep(T / 2 - 1);
+        P(sem_sm_key);
+        for (int i = 0; i < N; i++)
+        {
+            // checking if timed out
+            if (SM[i].free == 0)
+            {
+                // check if the message has been acked
+                // if not resend the message
+                // if yes check if the time has expired
+                // if yes resend the message
+                // if no do nothing
+                // iterate from start_index to last_sent_index
 
 
-    //deatch from shared memory
-    shmdt(SM);
+                // j is basically the length not index by design
+                for (int j = SM[i].swnd.start_index; (j-SM[i].swnd.start_index+SEND_BUFFER_SIZE)%(SEND_BUFFER_SIZE) <= SM[i].swnd.last_sent_index; j++)
+                {
+                    // if (SM[i].swnd.unack_time[j] + T < time(NULL))
+                    // {
+                    //     // resend the message
+                    //     // send the message
+                    //     // if the message is sent successfully update the unack_time
+                    //     if (sendto(SM[i].sockfd, SM[i].send_buffer[j], sizeof(SM[i].send_buffer[j]), 0, (struct sockaddr *)SM[i].addr, sizeof(struct sockaddr_in)) < 0)
+                    //     //you need to add the ack number in the message
+                    //     {
+                    //         // SM[i].swnd.unack_time[j] = -1;
 
+                    //         // do some error handling here
+                    //         perror("Error in thread while attempting to send to the socket");
+                    //         continue;
+                    //     }
+                    //     SM[i].swnd.unack_time[j] = time(NULL);
+                    // }
+                    //send all the messages from start_index to last_sent_index
+                    //dont check the time
 
+                      sprintf(send_buffer, "0$%d$%d$%d$$$", SM[i].addr->sin_addr.s_addr, SM[i].addr->sin_port,(SM[i].swnd.start_index_ack_no +(j))% MAX_SEQ_NUM + 1);
+                    
 
-     return res;
-}
-
-
-// set the correct errno
-ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_addrlen){
-    //first attach to shared memory
-
-    //need to use mutexes
-    key_t key = KEY;
-
-    int shmid=shmget(key,N*sizeof(struct shared_memory),0777);
-    struct shared_memory *SM = (struct shared_memory *)shmat(shmid,NULL,0);
-    //error checking
-    if(SM==NULL){
-        errno = ENOMEM;
-        printf("Init process not called \n");
-        return -1;
-    }
-    if(m_sockfd<0 || m_sockfd>=N){
-        errno = EBADF;
-        return -1;
-    }
-    if(SM[m_sockfd].free == 1){
-        errno = EBADF;
-        return -1;
-    }
-    if(SM[m_sockfd].pid!=getpid())
-    {
-        errno =EBADF;
-        return -1;
-    }
-    //check if port and ip are same
-    if( (SM[m_sockfd].addr->sin_port != ((struct sockaddr_in *)dest_addr)->sin_port) || (SM[m_sockfd].addr->sin_addr.s_addr != ((struct sockaddr_in *)dest_addr)->sin_addr.s_addr) ){
-        //errno = ENOTBOUND;
-        //set the correct errno;
-        printf("Port and IP are not same\n");
-        return -1;
-    }
-    // bruh send error if buf is not available not if window size is 0
-    // if(SM[m_sockfd].swnd.send_window_size == 0){
-    //     errno = ENOBUFS;
-    //     return -1;
-    // }
-    // if(!SM[m_sockfd].swnd.rem_buff_space)
-    // {
-    //     errno = ENOBUFS;
-    //     return -1;
-    // }
-    //check if the buffer is full
-    if(SM[m_sockfd].swnd.start_index == (SM[m_sockfd].swnd.end_index+1)%SEND_BUFFER_SIZE){
-        errno = ENOBUFS;
-        return -1;
-    }
-    // incrment the end index
-    SM[m_sockfd].swnd.end_index = (SM[m_sockfd].swnd.end_index+1)%SEND_BUFFER_SIZE;
-    //copy the message to the buffer
-    for(int i=0;i<length;i++){
-        SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i] = ((char )(message+i));
-    }
-    
-
-
-    // who adds the header is it S or this function ?
-    // it is s who adds the header
-
-
-
-
-
-
-
-}
-
-
-ssize_t m_recvfrom(int m_sockfd, void *restrict buffer, size_t length, int flags, struct sockaddr *restrict address, socklen_t *restrict address_len){
-
-    //first attach to shared memory
-    key_t key = KEY;
-    int shmid=shmget(key,N*sizeof(struct shared_memory),0777);
-    struct shared_memory *SM = (struct shared_memory *)shmat(shmid,NULL,0);
-
-    //error checking
-    if(SM==NULL){
-        errno = ENOMEM;
-        printf("Init process not called \n");
-        return -1;
-    }
-
-    // If the socket is free
-    if(SM[m_sockfd].free == 1){
-        errno = EBADF;
-        return -1;
-    }
-
-    for(int i=0;i<RECV_BUFFER_SIZE;i++){
-        // Assuming that the R process stores only the actual message in the Receive buffer ending with <crlf>
-        if(SM[m_sockfd].recv_buffer[i][0]!='\r' && SM[m_sockfd].recv_buffer[i][1]!='\n'){
-            int j = 0;
-            while(SM[m_sockfd].recv_buffer[i][j]!='\r' && SM[m_sockfd].recv_buffer[i][j+1]!='\n'){
-                *((char *)buffer+j) = SM[m_sockfd].recv_buffer[i][j];
-                j++;
+                        int len = strlen(send_buffer);
+                        for(int k = 0; k < 1000; k++)
+                        {
+                             send_buffer[len + k] = SM[i].send_buffer[(j-SM[i].swnd.start_index+SEND_BUFFER_SIZE)%SEND_BUFFER_SIZE][k];
+                        }
+                        
+                        if (sendto(SM[i].sockfd, send_buffer, len+1000, 0, (struct sockaddr *)SM[i].addr, sizeof(struct sockaddr_in)) < 0)
+                        {
+                            // do some error handling here
+                            // restore the index
+                            // SM[i].swnd.last_sent_index = (SM[i].swnd.last_sent_index - 1 + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE;
+                            
+                            //include the ack number in the message
+                            perror("Error in thread while attempting to send to the socket");
+                            break;
+                        }
+                    
+                }
             }
-            memset(SM[m_sockfd].recv_buffer[i],'\0',1000);
-            SM[m_sockfd].recv_buffer[i][0]='\r';
-            SM[m_sockfd].recv_buffer[i][1]='\n';
-            shmdt(SM);
-            return j;
         }
-    }
-    shmdt(SM);
-    errno = ENOMSG;
-    return -1;
+        // next check if there are any new messages to send
 
+        // you need to check
+
+        // need to add some headers  likie source adress and source port destionaion address and destination port not required??
+        // also need to add the ack the number of the message
+        // type of message ack or data
+
+        // should you ntohs ??
+
+        for (int i = 0; i < N; i++)
+        {
+            if (!(SM[i].free))
+            {
+                for (int j = 1; j <= SM[i].swnd.send_window_size; j++)
+                {
+                    if (((SM[i].swnd.last_sent_index + 1 - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE) <= ((SM[i].swnd.end_index - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE))
+                    {
+                        SM[i].swnd.last_sent_index = (SM[i].swnd.last_sent_index + 1) % SEND_BUFFER_SIZE;
+                        sprintf(send_buffer, "0$%d$%d$%d$$$", SM[i].addr->sin_addr.s_addr, SM[i].addr->sin_port,(SM[i].swnd.last_sent_ack_no  ) % MAX_SEQ_NUM + 1);
+                        int len = strlen(send_buffer);
+                        for(int k = 0; k < 1000; k++)
+                        {
+                             send_buffer[len + k] = SM[i].send_buffer[SM[i].swnd.last_sent_index][k];
+                        }
+                        
+                        if (sendto(SM[i].sockfd, send_buffer, len+1000, 0, (struct sockaddr *)SM[i].addr, sizeof(struct sockaddr_in)) < 0)
+                        {
+                            // do some error handling here
+                            // restore the index
+                            SM[i].swnd.last_sent_index = (SM[i].swnd.last_sent_index - 1 + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE;
+                            
+                            //include the ack number in the message
+                            perror("Error in thread while attempting to send to the socket");
+                            break;
+                        }
+                        SM[i].swnd.last_sent_ack_no = (SM[i].swnd.last_sent_ack_no  ) % MAX_SEQ_NUM + 1;    
+                        SM[i].swnd.unack_time[SM[i].swnd.last_sent_index] = time(NULL);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        V(sem_sm_key);
+    }
 }
 
-int m_close(int m_sockfd){
-    int res;
+void *G(void *params)
+{
+
+    // garbage collector process
+}
+
+int main()
+{
+
+    int sm_sem = semget(sem_sm_key, 1, 0777);
+    // initialize the semaphore to 1
+    semctl(sm_sem, 0, SETVAL, 1); // initially unlocked workd like mutex
+    struct sembuf pop, vop;
+    key_t sem1_key = SEM1_KEY;
+    key_t sem2_key = SEM2_KEY;
+    int sem1 = semget(sem1_key, 1, 0777);
+    int sem2 = semget(sem2_key, 1, 0777);
+
+    // initilaize both semaphores to 0
+    semctl(sem1, 0, SETVAL, 0);
+    semctl(sem2, 0, SETVAL, 0);
+    pop.sem_num = vop.sem_num = 0;
+    pop.sem_flg = vop.sem_flg = 0;
+    pop.sem_op = -1;
+    vop.sem_op = 1;
+    key_t sock_info_key = SOCK_INFO_KEY;
+    int sock_info = shmget(sock_info_key, sizeof(struct SOCKINFO), 0777);
+    struct SOCKINFO *sockinfo = (struct SOCKINFO *)shmat(sock_info, 0, 0);
+
+    int shmid;
     key_t key = KEY;
-    int shmid = shmget(key, N*sizeof(struct shared_memory), 0777);
-    struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
+    shmid = shmget(key, N * sizeof(struct shared_memory), 0777);
 
-    if(SM[m_sockfd].free == 0){
-        int sockfd = SM[m_sockfd].sockfd;
-        if((res = close(sockfd)) != 0){
-            shmdt(SM);
-            return -1;
+    pthread_t rid, sid, gid;
+    pthread_attr_t r_attr, s_attr, g_attr;
+    pthread_attr_init(&r_attr);
+    pthread_attr_init(&s_attr);
+    pthread_attr_init(&g_attr);
+    pthread_create(&rid, NULL, R, NULL);
+    pthread_detach(rid);
+    pthread_create(&sid, NULL, S, NULL);
+    pthread_detach(sid);
+    pthread_create(&gid, NULL, G, NULL);
+    pthread_detach(gid);
+
+    // need to attach?
+
+    // while(1){   // Garbage collector process
+
+    // }
+    while (1)
+    {
+        P(sem1);
+        // do stuff here
+
+        if (!(sockinfo->sockinfo))
+        {
+            // call socket here
+
+            sockinfo->sockinfo = socket(AF_INET, SOCK_STREAM, 0);
+            if (sockinfo->sockinfo < 0)
+            {
+                sockinfo->error_no = errno;
+                sockinfo->sockinfo = 0;
+            }
         }
-        memset(&SM[m_sockfd], NULL, sizeof(struct shared_memory));
-        SM[m_sockfd].free = 1;
-    }
-    else{
-        errno = EBADF;
-        res = -1;
-    }
-    shmdt(SM);
-    return res;
-}
+        else
+        {
+            // do stuff here
+            // call bind here
+            if (bind(sockinfo->sockinfo, (struct sockaddr *)sockinfo->addr, sizeof(struct sockaddr_in)) < 0)
+            {
+                sockinfo->error_no = errno;
+                sockinfo->sockinfo = -1;
+            }
+        }
 
-int dropMessage(float probability){
-    srand((unsigned int)time(NULL));
-    float r = (float)rand()/(float)(RAND_MAX);
-    return (r < probability ? 1 : 0);
+        V(sem2); // release the calling process
+    }
+
+    // when do you detach the shared memories and semaphores?
+    // when user presees control c right ? use signal handler??
 }
