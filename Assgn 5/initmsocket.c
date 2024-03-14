@@ -26,7 +26,7 @@ void *R(void *params)
 
     while(1)
     {
-        
+
         
     }
 }
@@ -98,7 +98,7 @@ void *S(void *params)
                         {
                             // do some error handling here
                             // restore the index
-                            SM[i].swnd.last_sent_index = (SM[i].swnd.last_sent_index - 1 + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE;
+                           // SM[i].swnd.last_sent_index = (SM[i].swnd.last_sent_index - 1 + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE;
                             
                             //include the ack number in the message
                             perror("Error in thread while attempting to send to the socket");
@@ -152,6 +152,8 @@ void *S(void *params)
                         break;
                     }
                 }
+                //make the send window size 0
+                SM[i].swnd.send_window_size = 0;
             }
         }
 
