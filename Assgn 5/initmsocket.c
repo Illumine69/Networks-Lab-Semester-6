@@ -1,10 +1,11 @@
-#include <msocket.h>
 #include <errno.h>
+#include <msocket.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ipc.h>
+#include <sys/select.h>
 #include <sys/sem.h>
 #include <sys/shm.h>
 #include <sys/socket.h>
@@ -16,13 +17,99 @@ key_t sem_sm_key;
 
 struct shared_memory *SM;
 
-char send_buffer[1500];
+char send_buffer[1500],recv_buffer[1500];
 
 void *R(void *params) {
     // receiver process
-    // should use slect call with timer
+    // should use select call with timer
+    fd_set master;
+    FD_ZERO(&master);
+    int max_fd = 0;
+
+    // set all the file descriptors in the master set
+    for (int i = 0; i < N; i++) {
+        if (SM[i].free == 0) {
+            FD_SET(SM[i].sockfd, &master);
+            if (SM[i].sockfd > max_fd) {
+                max_fd = SM[i].sockfd;
+            }
+        }
+    }
+
+    struct timeval timeout;
+    timeout.tv_sec = T;
+    timeout.tv_usec = 0;
 
     while (1) {
+        fd_set readfd = master;
+        int ret = select(max_fd + 1, &readfd, NULL, NULL, &timeout);
+        if (ret < 0) {
+            perror("Error in select");
+            continue;
+        } else if (ret == 0) {
+            // handle timeout
+            //  include implementation when timeout occurs with non zero
+            //  return value
+
+            // Check if any new socket has been added
+            for(int i=0;i < N;i++){
+                if(SM[i].free == 0){
+                    FD_SET(SM[i].sockfd, &master);
+                    if(SM[i].sockfd > max_fd){
+                        max_fd = SM[i].sockfd;
+                    }
+                }
+            }
+
+            // IF nospace flag is set and rwnd is not zero
+            // Send ACK with the last in-order message and rwnd size
+            // Reset the flag
+
+        } else {
+            for (int i = 0; i < N; i++) {
+                if (SM[i].free == 0 && FD_ISSET(SM[i].sockfd, &readfd)) {
+                    // handle the message
+                    struct sockaddr_in sender_addr;
+                    int n = recvfrom(SM[i].sockfd, recv_buffer, 1500, 0, (struct sockaddr *)&sender_addr, sizeof(struct sockaddr_in));
+                    if (n < 0) {
+                        perror("Error in recvfrom");
+                        continue;
+                    }
+                    // check if sender address is same as the address in the shared memory
+                    if (sender_addr.sin_addr.s_addr != SM[i].addr->sin_addr.s_addr || sender_addr.sin_port != SM[i].addr->sin_port) {
+                        // do some error handling here
+                        perror("Error in sender address in RECEIVER");
+                        continue;
+                    }
+
+                    // check if the message is an ack or data
+                    if(recv_buffer[0] == '0'){  //data message
+                        //  If message is in-order:
+                        //      write the message to the buffer after removing mtp header
+                        //      rwnd size is changed
+                        //      send ACK with the new rwnd size and this in-order message
+                        //  Else if message is out-of-order:
+                        //      If message is in rwnd:
+                        //          If message is not a duplicate:
+                        //              write the message to the buffer after removing mtp header
+                        //              send ACK with the new rwnd size and last in-order message
+                        //          Else:
+                        //              Drop the message
+                        //              Send ACK of last in-order message and rwnd size
+                    }
+                    else{       //ACK message 
+                        //  If Ack is for a previous message:
+                        //      Update swnd size
+                        //      Remove all message before this ACK number from the send buffer
+                        //  Else if ACK is duplicate:
+                        //      Update swnd size
+                    }
+
+                    // If receiver buffer is full, set nospcae flag
+
+                }
+            }
+        }
     }
 }
 

@@ -71,7 +71,7 @@ int m_socket(int domain, int type, int protocol) {
     sockinfo->sock_id = 0;
     sockinfo->error_no = 0;
     sockinfo->addr = 0;
-    
+
     if (free_available == 0) {
         errno = ENOBUFS;
         return -1;
@@ -208,8 +208,7 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
     }
     // check if port and ip are same
     if ((SM[m_sockfd].addr->sin_port != ((struct sockaddr_in *)dest_addr)->sin_port) || (SM[m_sockfd].addr->sin_addr.s_addr != ((struct sockaddr_in *)dest_addr)->sin_addr.s_addr)) {
-        // errno = ENOTBOUND;
-        // set the correct errno;
+        errno = ENOTCONN;
         printf("Port and IP are not same\n");
         return -1;
     }
