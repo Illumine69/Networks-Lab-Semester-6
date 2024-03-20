@@ -170,6 +170,9 @@ int main() {
     key_t sock_info_key = SOCK_INFO_KEY;
     int sock_info = shmget(sock_info_key, sizeof(struct SOCKINFO), 0777);
     struct SOCKINFO *sockinfo = (struct SOCKINFO *)shmat(sock_info, 0, 0);
+    sockinfo->sock_id = 0;
+    sockinfo->error_no = 0;
+    sockinfo->addr = 0;
 
     int shmid;
     key_t key = KEY;
@@ -196,20 +199,20 @@ int main() {
         P(sem1);
         // do stuff here
 
-        if (!(sockinfo->sockinfo)) {
+        if (!(sockinfo->sock_id)) {
             // call socket here
 
-            sockinfo->sockinfo = socket(AF_INET, SOCK_STREAM, 0);
-            if (sockinfo->sockinfo < 0) {
+            sockinfo->sock_id = socket(AF_INET, SOCK_STREAM, 0);
+            if (sockinfo->sock_id < 0) {
                 sockinfo->error_no = errno;
-                sockinfo->sockinfo = 0;
+                sockinfo->sock_id = -1;
             }
         } else {
             // do stuff here
             // call bind here
-            if (bind(sockinfo->sockinfo, (struct sockaddr *)sockinfo->addr, sizeof(struct sockaddr_in)) < 0) {
+            if (bind(sockinfo->sock_id, (struct sockaddr *)sockinfo->addr, sizeof(struct sockaddr_in)) < 0) {
                 sockinfo->error_no = errno;
-                sockinfo->sockinfo = -1;
+                sockinfo->sock_id = -1;
             }
         }
 

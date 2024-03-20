@@ -1,5 +1,5 @@
-#include <msocket.h>
 #include <errno.h>
+#include <msocket.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/shm.h>
@@ -33,20 +33,45 @@ int m_socket(int domain, int type, int protocol) {
     }
     int free_available = 0;
     int m_sockfd;
+
+    key_t sock_info_key = SOCK_INFO_KEY;
+    int sock_info = shmget(sock_info_key, sizeof(struct SOCKINFO), 0777);
+    struct SOCKINFO *sockinfo = (struct SOCKINFO *)shmat(sock_info, 0, 0);
+
+    // get semaphores
+    key_t sem1_key = SEM1_KEY;
+    key_t sem2_key = SEM2_KEY;
+    int sem1 = semget(sem1_key, 1, 0777);
+    int sem2 = semget(sem2_key, 1, 0777);
+
+    struct sembuf pop, vop;
+    pop.sem_num = vop.sem_num = 0;
+    pop.sem_flg = vop.sem_flg = 0;
+    pop.sem_op = -1;
+    vop.sem_op = 1;
+
     for (int i = 0; i < N; i++) {
         if (SM[i].free = 1) {
-            if ((sockfd = socket(domain, type, protocol)) == -1) {
-                shmdt(SM);
+            V(sem1);
+            P(sem2);
+
+            if (sockinfo->sock_id == -1) {
+                errno = sockinfo->error_no;
                 return -1;
             }
+
             free_available = 1;
             SM[i].free = 0;
-            SM[i].sockfd = sockfd;
+            SM[i].sockfd = sockinfo->sock_id;
             SM[i].pid = getpid();
             m_sockfd = i;
             break;
         }
     }
+    sockinfo->sock_id = 0;
+    sockinfo->error_no = 0;
+    sockinfo->addr = 0;
+    
     if (free_available == 0) {
         errno = ENOBUFS;
         return -1;
@@ -126,7 +151,7 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
     int sem1 = semget(sem1_key, 1, 0777);
     int sem2 = semget(sem2_key, 1, 0777);
     // place its udp sock id in sockinfo
-    sockinfo->sockinfo = SM[m_sockfd].sockfd;
+    sockinfo->sock_id = SM[m_sockfd].sockfd;
     sockinfo->addr = SM[m_sockfd].addr;
     sockinfo->error_no = 0;
     // signal till the init process
@@ -134,7 +159,7 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
     // wait till the init process signals
     P(sem2);
     // error checking
-    if (sockinfo->sockinfo < 0) {
+    if (sockinfo->sock_id < 0) {
         errno = sockinfo->error_no;
         return -1;
     }
