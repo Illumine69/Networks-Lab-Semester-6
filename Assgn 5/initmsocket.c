@@ -184,10 +184,37 @@ void *R(void *params) {
                         }
                     } else { // ACK message
                         //  If Ack is for a previous message:
+
                         //      Update swnd size
                         //      Remove all message before this ACK number from the send buffer
                         //  Else if ACK is duplicate:
                         //      Update swnd size
+                        
+                        int ackno=seq_no;
+                        int rwnd_size=atoi(message);
+                        //check if it is a valid ack no
+                        if((ackno-SM[i].swnd.start_index_ack_no+SEND_BUFFER_SIZE)%SEND_BUFFER_SIZE<=SM[i].swnd.last_sent_index-SM[i].swnd.start_index)
+                        {
+                           //valid ack no
+                           //update start index ack no
+                           //what would be the new start index
+                            int new_start_index=(SM[i].swnd.start_index+(ackno-SM[i].swnd.start_index_ack_no+MAX_SEQ_NUM+1)%(MAX_SEQ_NUM))%SEND_BUFFER_SIZE;
+                            SM[i].swnd.start_index_ack_no=ackno;
+                            SM[i].swnd.rem_buff_space+=(new_start_index-SM[i].swnd.start_index+SEND_BUFFER_SIZE)%SEND_BUFFER_SIZE;
+                            SM[i].swnd.start_index=new_start_index;
+
+                            SM[i].swnd.send_window_size=rwnd_size;
+
+                            //reset the timer
+
+
+                        }
+                        else {
+                            //duplicate ack
+                            SM[i].swnd.send_window_size=rwnd_size;
+
+                        }   
+
                     }
 
                     // If receiver buffer is full, set nospace flag
