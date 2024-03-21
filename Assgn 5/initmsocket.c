@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ipc.h>
 #include <sys/select.h>
 #include <sys/sem.h>
@@ -113,8 +114,20 @@ void *R(void *params) {
                     strcpy(sender_ip, strtok(NULL, "$"));
                     int sender_port = atoi(strtok(NULL, "$"));
                     int seq_no = atoi(strtok(NULL, "$"));
-                    char *message;
-                    strcpy(message, strtok(NULL, "$"));
+                    int size = atoi(strtok(NULL, "$"));
+                    char *message = (char *)malloc(size);
+                    int k = 0, msg_start = 0;
+                    for (int j = 0; j < n; j++) {
+                        if (recv_buffer[j] == '$') {
+                            k++;
+                        }
+                        if (k == 5) {
+                            if (msg_start == 0) {
+                                j++;
+                            }
+                            message[msg_start++] = recv_buffer[j];
+                        }
+                    }
 
                     if (type == 0) { // data message
                         //  If message is in-order:
@@ -122,7 +135,7 @@ void *R(void *params) {
                             // write the message to the buffer after removing mtp header
                             SM[i].rwnd.last_inorder_msg = (SM[i].rwnd.last_inorder_msg + 1) % RECV_BUFFER_SIZE;
                             SM[i].rwnd.last_inorder_msg_seq_num = seq_no;
-                            strcpy(SM[i].recv_buffer[SM[i].rwnd.last_inorder_msg], message);
+                            strncpy(SM[i].recv_buffer[SM[i].rwnd.last_inorder_msg], message, size);
                             SM[i].rwnd.recv_msg[SM[i].rwnd.last_inorder_msg] = 1;
                             int old_last_msg = SM[i].rwnd.last_inorder_msg;
                             update_Receiver_Last_Inorder_Msg(i);
@@ -136,10 +149,12 @@ void *R(void *params) {
                             int inc_msg_seq = (SM[i].rwnd.last_inorder_msg_seq_num - old_last_msg + RECV_BUFFER_SIZE) % RECV_BUFFER_SIZE;
                             SM[i].rwnd.last_inorder_msg_seq_num = (SM[i].rwnd.last_inorder_msg_seq_num + inc_msg_seq - 1 + MAX_SEQ_NUM) % MAX_SEQ_NUM + 1;
                             sprintf(ack, "1$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr.s_addr), ntohs(SM[i].addr->sin_port), SM[i].rwnd.last_inorder_msg_seq_num);
-                            int len = strlen(ack);
                             char *rwnd_size = (char *)malloc(1000);
                             sprintf(rwnd_size, "%d", SM[i].rwnd.receive_window_size);
-                            for (int k = 0; k < 1000; k++) {
+                            int size_len = strlen(rwnd_size);
+                            sprintf(ack, "%d$", size_len);
+                            int len = strlen(ack);
+                            for (int k = 0; k < size_len; k++) {
                                 ack[len + k] = rwnd_size[k];
                             }
                             if (sendto(SM[i].sockfd, ack, len + 1000, 0, (struct sockaddr *)SM[i].addr, sizeof(struct sockaddr_in)) < 0) {
@@ -159,17 +174,18 @@ void *R(void *params) {
                             char *rwnd_size = (char *)malloc(1000);
                             if (j >= 0 && j < RECV_BUFFER_SIZE && SM[i].rwnd.recv_msg[j] == 0) {
                                 // write the message to the buffer after removing mtp header
-                                strcpy(SM[i].recv_buffer[j], message);
+                                strncpy(SM[i].recv_buffer[j], message, size);
                                 SM[i].rwnd.recv_msg[j] = 1;
 
                                 // TODO: Update window size
-                                
                             }
                             // SEND the ACK
                             sprintf(ack, "1$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr.s_addr), ntohs(SM[i].addr->sin_port), SM[i].rwnd.last_inorder_msg_seq_num);
-                            int len = strlen(ack);
                             sprintf(rwnd_size, "%d", SM[i].rwnd.receive_window_size);
-                            for (int k = 0; k < 1000; k++) {
+                            int size_len = strlen(rwnd_size);
+                            sprintf(ack, "%d$", size_len);
+                            int len = strlen(ack);
+                            for (int k = 0; k < n; k++) {
                                 ack[len + k] = rwnd_size[k];
                             }
                             if (sendto(SM[i].sockfd, ack, len + 1000, 0, (struct sockaddr *)SM[i].addr, sizeof(struct sockaddr_in)) < 0) {

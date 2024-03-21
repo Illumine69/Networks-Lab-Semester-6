@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 int main() {
-    
 
     struct sockaddr_in servaddr;
     memset(&servaddr, 0, sizeof(servaddr));
@@ -25,7 +24,14 @@ int main() {
     // printf("Port: %d\n", servaddr.sin_port);
     // printf("%d\n", servaddr.sin_addr.s_addr == inet_addr(inet_ntoa(servaddr.sin_addr)));
 
-    char* ack = (char*)malloc(0);
-    sprintf(ack, "%s", "HILEADFKJAKsfefsefesfsef");
-    printf("%s\n", ack);
+    // char* ack = (char*)malloc(0);
+    // sprintf(ack, "%s", "HILEADFKJAKsfefsefesfsef");
+    // printf("%s\n", ack);
+    char recv_buffer[1500] = "awdwad$adwa\r\n$ad4w$\rDA$WAD$\na4wefw";
+    // strcpy(recv_buffer, "awdwad$adwa$ad4w$DA$WAD$a4\0wefw");
+    char *string = strtok(recv_buffer, "\r\n");
+    while (string != NULL) {
+        printf("%s\n", string);
+        string = strtok(NULL, "\r\n");
+    }
 }
