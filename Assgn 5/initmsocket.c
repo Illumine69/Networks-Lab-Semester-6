@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <msocket.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -11,6 +12,7 @@
 #include <sys/shm.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <signal.h>
 
 // create a mutex (semaphore )for the whole share memory
 
@@ -27,7 +29,13 @@ void update_Receive_Window_Size(int i) {
             return;
         }
     }
-    SM[i].rwnd.receive_window_size = (SM[i].rwnd.start_index - SM[i].rwnd.last_inorder_msg + RECV_BUFFER_SIZE - 1) % RECV_BUFFER_SIZE;
+    int win_size = 0;
+    int j = (SM[i].rwnd.last_inorder_msg + 1) % RECV_BUFFER_SIZE;
+    while (j != SM[i].rwnd.start_index) {
+        win_size++;
+        j = (j + 1) % RECV_BUFFER_SIZE;
+    }
+    SM[i].rwnd.receive_window_size = win_size;
 }
 
 void update_Receiver_Last_Inorder_Msg(int i) {
@@ -109,9 +117,8 @@ void *R(void *params) {
                     }
 
                     // check if the message is an ack or data
-                    int type = strtok(recv_buffer, "$") - '0';
-                    char *sender_ip;
-                    strcpy(sender_ip, strtok(NULL, "$"));
+                    int type = atoi(strtok(recv_buffer, "$"));
+                    char *sender_ip = strtok(NULL, "$");
                     int sender_port = atoi(strtok(NULL, "$"));
                     int seq_no = atoi(strtok(NULL, "$"));
                     int size = atoi(strtok(NULL, "$"));
@@ -148,7 +155,7 @@ void *R(void *params) {
                             char *ack = (char *)malloc(1500);
                             int inc_msg_seq = (SM[i].rwnd.last_inorder_msg_seq_num - old_last_msg + RECV_BUFFER_SIZE) % RECV_BUFFER_SIZE;
                             SM[i].rwnd.last_inorder_msg_seq_num = (SM[i].rwnd.last_inorder_msg_seq_num + inc_msg_seq - 1 + MAX_SEQ_NUM) % MAX_SEQ_NUM + 1;
-                            sprintf(ack, "1$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr.s_addr), ntohs(SM[i].addr->sin_port), SM[i].rwnd.last_inorder_msg_seq_num);
+                            sprintf(ack, "1$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr), ntohs(SM[i].addr->sin_port), SM[i].rwnd.last_inorder_msg_seq_num);
                             char *rwnd_size = (char *)malloc(1000);
                             sprintf(rwnd_size, "%d", SM[i].rwnd.receive_window_size);
                             int size_len = strlen(rwnd_size);
@@ -180,7 +187,7 @@ void *R(void *params) {
                                 // TODO: Update window size
                             }
                             // SEND the ACK
-                            sprintf(ack, "1$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr.s_addr), ntohs(SM[i].addr->sin_port), SM[i].rwnd.last_inorder_msg_seq_num);
+                            sprintf(ack, "1$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr), ntohs(SM[i].addr->sin_port), SM[i].rwnd.last_inorder_msg_seq_num);
                             sprintf(rwnd_size, "%d", SM[i].rwnd.receive_window_size);
                             int size_len = strlen(rwnd_size);
                             sprintf(ack, "%d$", size_len);
@@ -205,35 +212,34 @@ void *R(void *params) {
                         //      Remove all message before this ACK number from the send buffer
                         //  Else if ACK is duplicate:
                         //      Update swnd size
-                        
-                        int ackno=seq_no;
-                        int rwnd_size=atoi(message);
-                        //check if it is a valid ack no
-                        if((ackno-SM[i].swnd.start_index_ack_no+SEND_BUFFER_SIZE)%SEND_BUFFER_SIZE<=SM[i].swnd.last_sent_index-SM[i].swnd.start_index)
-                        {
-                           //valid ack no
-                           //update start index ack no
-                           //what would be the new start index
-                            int new_start_index=(SM[i].swnd.start_index+(ackno-SM[i].swnd.start_index_ack_no+MAX_SEQ_NUM+1)%(MAX_SEQ_NUM))%SEND_BUFFER_SIZE;
-                            SM[i].swnd.start_index_ack_no=ackno;
-                            SM[i].swnd.rem_buff_space+=(new_start_index-SM[i].swnd.start_index+SEND_BUFFER_SIZE)%SEND_BUFFER_SIZE;
-                            SM[i].swnd.start_index=new_start_index;
 
-                            SM[i].swnd.send_window_size=rwnd_size;
+                        int ackno = seq_no;
+                        int rwnd_size = atoi(message);
+                        // check if it is a valid ack no
+                        if ((ackno - SM[i].swnd.start_index_ack_no + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE <= SM[i].swnd.last_sent_index - SM[i].swnd.start_index) {
+                            // valid ack no
+                            // update start index ack no
+                            // what would be the new start index
+                            int new_start_index = (SM[i].swnd.start_index + (ackno - SM[i].swnd.start_index_ack_no + MAX_SEQ_NUM + 1) % (MAX_SEQ_NUM)) % SEND_BUFFER_SIZE;
+                            SM[i].swnd.start_index_ack_no = ackno;
+                            SM[i].swnd.rem_buff_space += (new_start_index - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE;
+                            SM[i].swnd.start_index = new_start_index;
 
-                            //reset the timer
+                            SM[i].swnd.send_window_size = rwnd_size;
 
+                            // reset the timer
 
+                        } else {
+                            // duplicate ack
+                            SM[i].swnd.send_window_size = rwnd_size;
                         }
-                        else {
-                            //duplicate ack
-                            SM[i].swnd.send_window_size=rwnd_size;
-
-                        }   
-
                     }
 
                     // If receiver buffer is full, set nospace flag
+                    update_Receive_Window_Size(i);
+                    if (SM[i].rwnd.receive_window_size == 0) {
+                        SM[i].rwnd.nospace = 1;
+                    }
                 }
             }
         }
@@ -287,7 +293,7 @@ void *S(void *params) {
                     // }
                     // send all the messages from start_index to last_sent_index
                     // dont check the time
-                    sprintf(send_buffer, "0$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr.s_addr), ntohs(SM[i].addr->sin_port), (SM[i].swnd.start_index_ack_no + (j - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % (SEND_BUFFER_SIZE)) % MAX_SEQ_NUM + 1);
+                    sprintf(send_buffer, "0$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr), ntohs(SM[i].addr->sin_port), (SM[i].swnd.start_index_ack_no + (j - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % (SEND_BUFFER_SIZE)) % MAX_SEQ_NUM + 1);
 
                     int len = strlen(send_buffer);
                     for (int k = 0; k < 1000; k++) {
@@ -323,7 +329,7 @@ void *S(void *params) {
                     if (((SM[i].swnd.last_sent_index + 1 - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE) <= ((SM[i].swnd.end_index - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE)) {
                         SM[i].swnd.last_sent_index = (SM[i].swnd.last_sent_index + 1) % SEND_BUFFER_SIZE;
                         SM[i].swnd.last_sent_ack_no = (SM[i].swnd.last_sent_ack_no) % MAX_SEQ_NUM + 1;
-                        sprintf(send_buffer, "0$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr.s_addr), ntohs(SM[i].addr->sin_port), (SM[i].swnd.last_sent_ack_no) % MAX_SEQ_NUM + 1);
+                        sprintf(send_buffer, "0$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr), ntohs(SM[i].addr->sin_port), (SM[i].swnd.last_sent_ack_no) % MAX_SEQ_NUM + 1);
 
                         int len = strlen(send_buffer);
                         for (int k = 0; k < 1000; k++) {
@@ -360,6 +366,38 @@ void *S(void *params) {
 void *G(void *params) {
 
     // garbage collector process
+    int shmid;
+
+    key_t key = KEY;
+    shmid = shmget(key, N * sizeof(struct shared_memory), 0777);
+    struct shared_memory *SM = (struct shared_memory *)shmat(shmid, 0, 0);
+
+    while (1) {
+        sleep(T / 2);
+        int status;
+        for (int i = 0; i < N; i++) {
+            if (!(SM[i].free)) {
+                int pid = SM[i].pid;
+                status = kill(pid, 0);
+                if (status < 0) {
+                    // process is dead
+                    // free the shared memory
+                    SM[i].free = 1;
+                    SM[i].pid = -1;
+                    SM[i].swnd.send_window_size = 0;
+                    SM[i].swnd.start_index = 0;
+                    SM[i].swnd.last_sent_index = 0;
+                    SM[i].swnd.end_index = 0;
+                    SM[i].swnd.start_index_ack_no = 0;
+                    SM[i].swnd.last_sent_ack_no = 0;
+                    SM[i].swnd.rem_buff_space = SEND_BUFFER_SIZE;
+                    for (int j = 0; j < 10; j++) {
+                        SM[i].swnd.unack_time[j] = 0;
+                    }
+                }
+            }
+        }
+    }
 }
 
 int main() {

@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <msocket.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/shm.h>
@@ -28,7 +29,6 @@ int m_socket(int domain, int type, int protocol) {
     if (SM == NULL) {
         errno = ENOMEM;
         printf("Init process not called \n");
-        close(sockfd);
         return -1;
     }
     int free_available = 0;
@@ -51,7 +51,7 @@ int m_socket(int domain, int type, int protocol) {
     vop.sem_op = 1;
 
     for (int i = 0; i < N; i++) {
-        if (SM[i].free = 1) {
+        if (SM[i].free == 1) {
             V(sem1);
             P(sem2);
 
@@ -128,10 +128,13 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
 
     // initialze the receive window
     SM[m_sockfd].rwnd.receive_window_size = MAX_WINDOW_SIZE;
+    SM[m_sockfd].rwnd.last_inorder_msg = 0; // Cause numbering starts from 1
+    SM[m_sockfd].rwnd.last_inorder_msg_seq_num = 0;
+    SM[m_sockfd].rwnd.start_index = 1;
+    SM[m_sockfd].rwnd.start_seq_num = 0;
+    SM[m_sockfd].rwnd.nospace = 0;
 
-    SM[m_sockfd].rwnd.last_inorder_msg = 0; // COZ numbering starts from 1
-
-    memset(SM[m_sockfd].rwnd.recv_msg, -1, sizeof(SM[m_sockfd].rwnd.recv_msg));
+    memset(SM[m_sockfd].rwnd.recv_msg, 0, sizeof(SM[m_sockfd].rwnd.recv_msg));
     // call the system bind call
     // int res =bind(SM[m_sockfd].sockfd, src_addr, src_addrlen);
     // signal the init process
@@ -223,6 +226,7 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
         SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i] = ((char)(message + i));
     }
 
+    return 0;
     // who adds the header is it S or this function ?
     // it is s who adds the header
 }
