@@ -274,12 +274,7 @@ int m_close(int m_sockfd) {
     struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
 
     if (SM[m_sockfd].free == 0) {
-        int sockfd = SM[m_sockfd].sockfd;
-        if ((res = close(sockfd)) != 0) {
-            shmdt(SM);
-            return -1;
-        }
-        memset(&SM[m_sockfd], NULL, sizeof(struct shared_memory));
+        // memset(&SM[m_sockfd], NULL, sizeof(struct shared_memory));
         SM[m_sockfd].free = 1;
     } else {
         errno = EBADF;

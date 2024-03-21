@@ -30,7 +30,7 @@
 
 // header syntax ::
 
-// Type field (0/1)$Destip$port$Sequence Number$Ack Number$Window Size$Data
+// Type field (0/1)$Destip$port$Sequence Number$Size$Data
 
 // 0 for data and 1 for ack
 
@@ -46,7 +46,7 @@ struct swnd {
     int send_window_size; // current send window size
     // int last_ack;                   //last ack received
     // int unack_msg[5];               //unacknowledged messages
-    time_t unack_time[10];
+    time_t unack_time[SEND_BUFFER_SIZE];
     int rem_buff_space;
     // int last_sent;                  //last sent message
     // time at which the message was sent
@@ -57,10 +57,15 @@ struct swnd {
     int last_sent_ack_no;   // ack no of the last sent index
 };
 
+// start index should always be less than last_inorder_msg
 struct rwnd {
-    int receive_window_size; // current receive window size
-    int last_inorder_msg;    // last in-order message received
-    int recv_msg[5];         // received messages
+    int receive_window_size;        // current receive window size
+    int last_inorder_msg;           // last in-order message received
+    int last_inorder_msg_seq_num;   // sequence number of the last in-order message
+    int recv_msg[RECV_BUFFER_SIZE]; // received messages
+    int start_index;                // start index in the receive buffer to send to user
+    int start_seq_num;              // sequence number of the start index
+    int nospace; // set if receive_window_size becomes 0
 };
 
 struct shared_memory {

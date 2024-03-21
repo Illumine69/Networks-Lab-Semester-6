@@ -17,7 +17,26 @@ key_t sem_sm_key;
 
 struct shared_memory *SM;
 
-char send_buffer[1500],recv_buffer[1500];
+char send_buffer[1500], recv_buffer[1500];
+
+void update_Receive_Window_Size(int i) {
+    if (SM[i].rwnd.start_index == (SM[i].rwnd.last_inorder_msg + 1) % RECV_BUFFER_SIZE) {
+        if (SM[i].rwnd.recv_msg[SM[i].rwnd.start_index] == 0) {
+            SM[i].rwnd.receive_window_size = RECV_BUFFER_SIZE;
+            return;
+        }
+    }
+    SM[i].rwnd.receive_window_size = (SM[i].rwnd.start_index - SM[i].rwnd.last_inorder_msg + RECV_BUFFER_SIZE - 1) % RECV_BUFFER_SIZE;
+}
+
+void update_Receiver_Last_Inorder_Msg(int i) {
+    int j = SM[i].rwnd.last_inorder_msg;
+    j = (j + 1) % RECV_BUFFER_SIZE;
+    while (SM[i].rwnd.recv_msg[j] == 1 && j != SM[i].rwnd.start_index) {
+        j = (j + 1) % RECV_BUFFER_SIZE;
+    }
+    SM[i].rwnd.last_inorder_msg = (j - 1 + RECV_BUFFER_SIZE) % RECV_BUFFER_SIZE;
+}
 
 void *R(void *params) {
     // receiver process
@@ -52,10 +71,10 @@ void *R(void *params) {
             //  return value
 
             // Check if any new socket has been added
-            for(int i=0;i < N;i++){
-                if(SM[i].free == 0){
+            for (int i = 0; i < N; i++) {
+                if (SM[i].free == 0) {
                     FD_SET(SM[i].sockfd, &master);
-                    if(SM[i].sockfd > max_fd){
+                    if (SM[i].sockfd > max_fd) {
                         max_fd = SM[i].sockfd;
                     }
                 }
@@ -64,6 +83,12 @@ void *R(void *params) {
             // IF nospace flag is set and rwnd is not zero
             // Send ACK with the last in-order message and rwnd size
             // Reset the flag
+            for (int i = 0; i < N; i++) {
+                if (SM[i].rwnd.nospace && SM[i].rwnd.receive_window_size != 0) {
+                    // Send duplicate ACK
+                    SM[i].rwnd.nospace = 0;
+                }
+            }
 
         } else {
             for (int i = 0; i < N; i++) {
@@ -83,21 +108,81 @@ void *R(void *params) {
                     }
 
                     // check if the message is an ack or data
-                    if(recv_buffer[0] == '0'){  //data message
+                    int type = strtok(recv_buffer, "$") - '0';
+                    char *sender_ip;
+                    strcpy(sender_ip, strtok(NULL, "$"));
+                    int sender_port = atoi(strtok(NULL, "$"));
+                    int seq_no = atoi(strtok(NULL, "$"));
+                    char *message;
+                    strcpy(message, strtok(NULL, "$"));
+
+                    if (type == 0) { // data message
                         //  If message is in-order:
-                        //      write the message to the buffer after removing mtp header
-                        //      rwnd size is changed
-                        //      send ACK with the new rwnd size and this in-order message
-                        //  Else if message is out-of-order:
-                        //      If message is in rwnd:
-                        //          If message is not a duplicate:
-                        //              write the message to the buffer after removing mtp header
-                        //              send ACK with the new rwnd size and last in-order message
-                        //          Else:
-                        //              Drop the message
-                        //              Send ACK of last in-order message and rwnd size
-                    }
-                    else{       //ACK message 
+                        if (seq_no == ((SM[i].rwnd.last_inorder_msg_seq_num) % MAX_SEQ_NUM + 1)) {
+                            // write the message to the buffer after removing mtp header
+                            SM[i].rwnd.last_inorder_msg = (SM[i].rwnd.last_inorder_msg + 1) % RECV_BUFFER_SIZE;
+                            SM[i].rwnd.last_inorder_msg_seq_num = seq_no;
+                            strcpy(SM[i].recv_buffer[SM[i].rwnd.last_inorder_msg], message);
+                            SM[i].rwnd.recv_msg[SM[i].rwnd.last_inorder_msg] = 1;
+                            int old_last_msg = SM[i].rwnd.last_inorder_msg;
+                            update_Receiver_Last_Inorder_Msg(i);
+                            // rwnd size is changed
+                            update_Receive_Window_Size(i);
+                            if (SM[i].rwnd.receive_window_size == 0) {
+                                SM[i].rwnd.nospace = 1;
+                            }
+                            // send ACK with the new rwnd size and this in-order message
+                            char *ack = (char *)malloc(1500);
+                            int inc_msg_seq = (SM[i].rwnd.last_inorder_msg_seq_num - old_last_msg + RECV_BUFFER_SIZE) % RECV_BUFFER_SIZE;
+                            SM[i].rwnd.last_inorder_msg_seq_num = (SM[i].rwnd.last_inorder_msg_seq_num + inc_msg_seq - 1 + MAX_SEQ_NUM) % MAX_SEQ_NUM + 1;
+                            sprintf(ack, "1$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr.s_addr), ntohs(SM[i].addr->sin_port), SM[i].rwnd.last_inorder_msg_seq_num);
+                            int len = strlen(ack);
+                            char *rwnd_size = (char *)malloc(1000);
+                            sprintf(rwnd_size, "%d", SM[i].rwnd.receive_window_size);
+                            for (int k = 0; k < 1000; k++) {
+                                ack[len + k] = rwnd_size[k];
+                            }
+                            if (sendto(SM[i].sockfd, ack, len + 1000, 0, (struct sockaddr *)SM[i].addr, sizeof(struct sockaddr_in)) < 0) {
+                                // do some error handling here
+                                free(ack);
+                                free(rwnd_size);
+                                perror("Error in thread while attempting to send ACK to the socket");
+                                continue;
+                            }
+                            free(ack);
+                            free(rwnd_size);
+                        } else { // out-of-order message
+                            int j = seq_no - SM[i].rwnd.last_inorder_msg_seq_num + SM[i].rwnd.last_inorder_msg;
+                            // TODO: If message is in rwnd AND
+                            // If message is not a duplicate:
+                            char *ack = (char *)malloc(1500);
+                            char *rwnd_size = (char *)malloc(1000);
+                            if (j >= 0 && j < RECV_BUFFER_SIZE && SM[i].rwnd.recv_msg[j] == 0) {
+                                // write the message to the buffer after removing mtp header
+                                strcpy(SM[i].recv_buffer[j], message);
+                                SM[i].rwnd.recv_msg[j] = 1;
+
+                                // TODO: Update window size
+                                
+                            }
+                            // SEND the ACK
+                            sprintf(ack, "1$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr.s_addr), ntohs(SM[i].addr->sin_port), SM[i].rwnd.last_inorder_msg_seq_num);
+                            int len = strlen(ack);
+                            sprintf(rwnd_size, "%d", SM[i].rwnd.receive_window_size);
+                            for (int k = 0; k < 1000; k++) {
+                                ack[len + k] = rwnd_size[k];
+                            }
+                            if (sendto(SM[i].sockfd, ack, len + 1000, 0, (struct sockaddr *)SM[i].addr, sizeof(struct sockaddr_in)) < 0) {
+                                // do some error handling here
+                                free(ack);
+                                free(rwnd_size);
+                                perror("Error in thread while attempting to send ACK to the socket");
+                                continue;
+                            }
+                            free(ack);
+                            free(rwnd_size);
+                        }
+                    } else { // ACK message
                         //  If Ack is for a previous message:
                         //      Update swnd size
                         //      Remove all message before this ACK number from the send buffer
@@ -105,8 +190,7 @@ void *R(void *params) {
                         //      Update swnd size
                     }
 
-                    // If receiver buffer is full, set nospcae flag
-
+                    // If receiver buffer is full, set nospace flag
                 }
             }
         }
@@ -160,8 +244,7 @@ void *S(void *params) {
                     // }
                     // send all the messages from start_index to last_sent_index
                     // dont check the time
-
-                    sprintf(send_buffer, "0$%d$%d$%d$$$", SM[i].addr->sin_addr.s_addr, SM[i].addr->sin_port, (SM[i].swnd.start_index_ack_no + (j - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % (SEND_BUFFER_SIZE)) % MAX_SEQ_NUM + 1);
+                    sprintf(send_buffer, "0$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr.s_addr), ntohs(SM[i].addr->sin_port), (SM[i].swnd.start_index_ack_no + (j - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % (SEND_BUFFER_SIZE)) % MAX_SEQ_NUM + 1);
 
                     int len = strlen(send_buffer);
                     for (int k = 0; k < 1000; k++) {
@@ -197,7 +280,7 @@ void *S(void *params) {
                     if (((SM[i].swnd.last_sent_index + 1 - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE) <= ((SM[i].swnd.end_index - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE)) {
                         SM[i].swnd.last_sent_index = (SM[i].swnd.last_sent_index + 1) % SEND_BUFFER_SIZE;
                         SM[i].swnd.last_sent_ack_no = (SM[i].swnd.last_sent_ack_no) % MAX_SEQ_NUM + 1;
-                        sprintf(send_buffer, "0$%d$%d$%d$$$", SM[i].addr->sin_addr.s_addr, SM[i].addr->sin_port, (SM[i].swnd.last_sent_ack_no) % MAX_SEQ_NUM + 1);
+                        sprintf(send_buffer, "0$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr.s_addr), ntohs(SM[i].addr->sin_port), (SM[i].swnd.last_sent_ack_no) % MAX_SEQ_NUM + 1);
 
                         int len = strlen(send_buffer);
                         for (int k = 0; k < 1000; k++) {
@@ -264,6 +347,15 @@ int main() {
     int shmid;
     key_t key = KEY;
     shmid = shmget(key, N * sizeof(struct shared_memory), 0777);
+    struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
+    for (int i = 0; i < N; i++) {
+        SM[i].free = 1;
+        SM[i].pid = -1;
+        SM[i].sockfd = -1;
+        SM[i].addr = NULL;
+        SM[i].swnd = (struct swnd){.send_window_size = 0, .rem_buff_space = SEND_BUFFER_SIZE, .start_index = 0, .last_sent_index = -1, .end_index = SEND_BUFFER_SIZE - 1, .start_index_ack_no = 0, .last_sent_ack_no = 0};
+        SM[i].rwnd = (struct rwnd){.receive_window_size = RECV_BUFFER_SIZE, .last_inorder_msg = 0, .nospace = 0};
+    }
 
     pthread_t rid, sid, gid;
     pthread_attr_t r_attr, s_attr, g_attr;
