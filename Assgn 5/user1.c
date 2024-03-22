@@ -1,5 +1,6 @@
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <msocket.h>
 #include <netinet/in.h>
@@ -46,7 +47,11 @@ int main() {
     int n;
     while ((n = read(fd, buffer, 1000)) > 0) {
         // TODO: ensure that only 1000 bytes are sent at a time
-        if (m_sendto(sockfd, buffer, n, 0, (const struct sockaddr *)&destaddr, sizeof(destaddr)) == -1) {
+        while (m_sendto(sockfd, buffer, n, 0, (const struct sockaddr *)&destaddr, sizeof(destaddr)) == -1) {
+            if (errno == ENOBUFS) {
+                // Buuder is full. Resend the same message
+                continue;
+            }
             printf("Error in sending\n");
             exit(1);
         }

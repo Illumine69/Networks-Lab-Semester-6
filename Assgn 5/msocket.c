@@ -194,7 +194,7 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
 
     // need to use mutexes
     key_t key = KEY;
-
+    // printf("M_sockfd: %d\n", m_sockfd);
     int shmid = shmget(key, N * sizeof(struct shared_memory), 0777);
     struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
     // error checking
@@ -225,11 +225,11 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
         errno = ENOBUFS;
         return -1;
     }
-    // incrment the end index
+    // increment the end index
     SM[m_sockfd].swnd.end_index = (SM[m_sockfd].swnd.end_index + 1) % SEND_BUFFER_SIZE;
     // copy the message to the buffer
     for (int i = 0; i < length; i++) {
-        SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i] = ((char)(message + i));
+        SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i] = *((char*)(message + i));
     }
 
     return 0;

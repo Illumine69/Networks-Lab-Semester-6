@@ -119,6 +119,7 @@ void *R(void *params) {
                     // handle the message
                     struct sockaddr_in sender_addr;
                     int n = recvfrom(SM[i].sockfd, recv_buffer, 1500, 0, (struct sockaddr *)&sender_addr, sizeof(struct sockaddr_in));
+                    //TODO: Implement dropMessage function
                     if (n < 0) {
                         perror("Error in recvfrom");
                         continue;
@@ -323,7 +324,7 @@ void *S(void *params) {
                     for (int k = 0; k < 1000; k++) {
                         send_buffer[len + k] = SM[i].send_buffer[(j - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE][k];
                     }
-
+                    printf("Message from S thread: %s", send_buffer); 
                     if (sendto(SM[i].sockfd, send_buffer, len + 1000, 0, (struct sockaddr *)SM[i].addr, sizeof(struct sockaddr_in)) < 0) {
                         // do some error handling here
                         // restore the index
