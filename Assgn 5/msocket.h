@@ -48,6 +48,7 @@ struct swnd {
     // int last_ack;                   //last ack received
     // int unack_msg[5];               //unacknowledged messages
     time_t unack_time[SEND_BUFFER_SIZE];
+    int length[SEND_BUFFER_SIZE];
     int rem_buff_space;
     // int last_sent;                  //last sent message
     // time at which the message was sent

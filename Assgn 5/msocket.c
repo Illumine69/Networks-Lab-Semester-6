@@ -231,6 +231,7 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
     for (int i = 0; i < length; i++) {
         SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i] = *((char*)(message + i));
     }
+    SM[m_sockfd].swnd.length[SM[m_sockfd].swnd.end_index] = length;
 
     return 0;
     // who adds the header is it S or this function ?

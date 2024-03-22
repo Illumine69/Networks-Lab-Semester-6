@@ -318,14 +318,15 @@ void *S(void *params) {
                     // }
                     // send all the messages from start_index to last_sent_index
                     // dont check the time
-                    sprintf(send_buffer, "0$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr), ntohs(SM[i].addr->sin_port), (SM[i].swnd.start_index_ack_no + (j - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % (SEND_BUFFER_SIZE)) % MAX_SEQ_NUM + 1);
+                    sprintf(send_buffer, "0$%s$%d$%d$%d$", inet_ntoa(SM[i].addr->sin_addr), ntohs(SM[i].addr->sin_port), (SM[i].swnd.start_index_ack_no + (j - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % (SEND_BUFFER_SIZE)) % MAX_SEQ_NUM + 1,SM[i].swnd.length[j]);
+                    int msglen=SM[i].swnd.length[j];
 
                     int len = strlen(send_buffer);
-                    for (int k = 0; k < 1000; k++) {
+                    for (int k = 0; k <msglen; k++) {
                         send_buffer[len + k] = SM[i].send_buffer[(j - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE][k];
                     }
                     printf("Message from S thread: %s", send_buffer); 
-                    if (sendto(SM[i].sockfd, send_buffer, len + 1000, 0, (struct sockaddr *)SM[i].addr, sizeof(struct sockaddr_in)) < 0) {
+                    if (sendto(SM[i].sockfd, send_buffer, len +msglen, 0, (struct sockaddr *)SM[i].addr, sizeof(struct sockaddr_in)) < 0) {
                         // do some error handling here
                         // restore the index
                         // SM[i].swnd.last_sent_index = (SM[i].swnd.last_sent_index - 1 + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE;
@@ -354,14 +355,15 @@ void *S(void *params) {
                     if (((SM[i].swnd.last_sent_index + 1 - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE) <= ((SM[i].swnd.end_index - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE)) {
                         SM[i].swnd.last_sent_index = (SM[i].swnd.last_sent_index + 1) % SEND_BUFFER_SIZE;
                         SM[i].swnd.last_sent_ack_no = (SM[i].swnd.last_sent_ack_no) % MAX_SEQ_NUM + 1;
-                        sprintf(send_buffer, "0$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr), ntohs(SM[i].addr->sin_port), (SM[i].swnd.last_sent_ack_no) % MAX_SEQ_NUM + 1);
+                        int msglen=SM[i].swnd.length[SM[i].swnd.last_sent_index];
+                        sprintf(send_buffer, "0$%s$%d$%d$%d$", inet_ntoa(SM[i].addr->sin_addr), ntohs(SM[i].addr->sin_port), (SM[i].swnd.last_sent_ack_no) % MAX_SEQ_NUM + 1, msglen);
 
                         int len = strlen(send_buffer);
-                        for (int k = 0; k < 1000; k++) {
+                        for (int k = 0; k < msglen; k++) {
                             send_buffer[len + k] = SM[i].send_buffer[SM[i].swnd.last_sent_index][k];
                         }
 
-                        if (sendto(SM[i].sockfd, send_buffer, len + 1000, 0, (struct sockaddr *)SM[i].addr, sizeof(struct sockaddr_in)) < 0) {
+                        if (sendto(SM[i].sockfd, send_buffer, len + msglen, 0, (struct sockaddr *)SM[i].addr, sizeof(struct sockaddr_in)) < 0) {
                             // do some error handling here
                             // restore the index
                             SM[i].swnd.last_sent_index = (SM[i].swnd.last_sent_index - 1 + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE;
