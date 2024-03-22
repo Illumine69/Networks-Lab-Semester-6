@@ -1,8 +1,9 @@
+#include <arpa/inet.h>
 #include <errno.h>
 #include <msocket.h>
-#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,11 +13,8 @@
 #include <sys/shm.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <signal.h>
 
 // create a mutex (semaphore )for the whole share memory
-
-key_t sem_sm_key;
 
 struct shared_memory *SM;
 
@@ -48,6 +46,19 @@ void update_Receiver_Last_Inorder_Msg(int i) {
 }
 
 void *R(void *params) {
+    key_t key = KEY;
+    int shmid = shmget(key, N * sizeof(struct shared_memory), 0777);
+    struct shared_memory *SM = (struct shared_memory *)shmat(shmid, 0, 0);
+
+    key_t sem_sm_key = SEM_SM_KEY;
+    int sem_sm = semget(sem_sm_key, 1, 0777);
+
+    struct sembuf pop, vop;
+    pop.sem_num = vop.sem_num = 0;
+    pop.sem_flg = vop.sem_flg = 0;
+    pop.sem_op = -1;
+    vop.sem_op = 1;
+
     // receiver process
     // should use select call with timer
     fd_set master;
@@ -63,16 +74,18 @@ void *R(void *params) {
             }
         }
     }
-
     struct timeval timeout;
     timeout.tv_sec = T;
     timeout.tv_usec = 0;
 
     while (1) {
+        P(sem_sm);
+        printf("Receiver\n");
         fd_set readfd = master;
         int ret = select(max_fd + 1, &readfd, NULL, NULL, &timeout);
         if (ret < 0) {
             perror("Error in select");
+            V(sem_sm);
             continue;
         } else if (ret == 0) {
             // handle timeout
@@ -93,12 +106,13 @@ void *R(void *params) {
             // Send ACK with the last in-order message and rwnd size
             // Reset the flag
             for (int i = 0; i < N; i++) {
-                if (SM[i].rwnd.nospace && SM[i].rwnd.receive_window_size != 0) {
+                if (SM[i].rwnd.nospace == 1 && SM[i].rwnd.receive_window_size != 0) {
                     // Send duplicate ACK
                     SM[i].rwnd.nospace = 0;
                 }
             }
-
+            timeout.tv_sec = T;
+            timeout.tv_usec = 0;
         } else {
             for (int i = 0; i < N; i++) {
                 if (SM[i].free == 0 && FD_ISSET(SM[i].sockfd, &readfd)) {
@@ -188,6 +202,7 @@ void *R(void *params) {
                             }
                             // SEND the ACK
                             sprintf(ack, "1$%s$%d$%d$", inet_ntoa(SM[i].addr->sin_addr), ntohs(SM[i].addr->sin_port), SM[i].rwnd.last_inorder_msg_seq_num);
+                            update_Receive_Window_Size(i);
                             sprintf(rwnd_size, "%d", SM[i].rwnd.receive_window_size);
                             int size_len = strlen(rwnd_size);
                             sprintf(ack, "%d$", size_len);
@@ -243,6 +258,8 @@ void *R(void *params) {
                 }
             }
         }
+        printf("Receiver Leaving\n");
+        V(sem_sm);
     }
 }
 
@@ -250,6 +267,9 @@ void *S(void *params) {
     // sender process
 
     // should you implement a per SM semaphore or per index semaphore for SM?// choose the easy way
+    key_t key = KEY;
+    int shmid = shmget(key, N * sizeof(struct shared_memory), 0777);
+    struct shared_memory *SM = (struct shared_memory *)shmat(shmid, 0, 0);
 
     struct sembuf pop, vop;
     pop.sem_num = vop.sem_num = 0;
@@ -257,10 +277,14 @@ void *S(void *params) {
     pop.sem_op = -1;
     vop.sem_op = 1;
 
+    key_t sem_sm_key = SEM_SM_KEY;
+    int sem_sm = semget(sem_sm_key, 1, 0777);
+
     while (1) {
         // sleep for <T/2 seconds
         sleep(T / 3);
-        P(sem_sm_key);
+        P(sem_sm);
+        printf("Sender\n");
         for (int i = 0; i < N; i++) {
             // checking if timed out
             if (SM[i].free == 0) {
@@ -324,7 +348,7 @@ void *S(void *params) {
         // should you ntohs ??
 
         for (int i = 0; i < N; i++) {
-            if (!(SM[i].free)) {
+            if (SM[i].free == 0) {
                 for (int j = 1; j <= SM[i].swnd.send_window_size; j++) {
                     if (((SM[i].swnd.last_sent_index + 1 - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE) <= ((SM[i].swnd.end_index - SM[i].swnd.start_index + SEND_BUFFER_SIZE) % SEND_BUFFER_SIZE)) {
                         SM[i].swnd.last_sent_index = (SM[i].swnd.last_sent_index + 1) % SEND_BUFFER_SIZE;
@@ -358,8 +382,8 @@ void *S(void *params) {
                 SM[i].swnd.send_window_size = 0;
             }
         }
-
-        V(sem_sm_key);
+        printf("Sender Leaving\n");
+        V(sem_sm);
     }
 }
 
@@ -372,8 +396,18 @@ void *G(void *params) {
     shmid = shmget(key, N * sizeof(struct shared_memory), 0777);
     struct shared_memory *SM = (struct shared_memory *)shmat(shmid, 0, 0);
 
+    key_t sem_sm_key = SEM_SM_KEY;
+    int sm_sem = semget(sem_sm_key, 1, 0777);
+    struct sembuf pop, vop;
+    pop.sem_num = vop.sem_num = 0;
+    pop.sem_flg = vop.sem_flg = 0;
+    pop.sem_op = -1;
+    vop.sem_op = 1;
+
     while (1) {
         sleep(T / 2);
+        P(sm_sem);
+        printf("Garbage\n");
         int status;
         for (int i = 0; i < N; i++) {
             if (!(SM[i].free)) {
@@ -397,19 +431,22 @@ void *G(void *params) {
                 }
             }
         }
+        printf("Garbage Leaving\n");
+        V(sm_sem);
     }
 }
 
 int main() {
 
-    int sm_sem = semget(sem_sm_key, 1, 0777);
-    // initialize the semaphore to 1
-    semctl(sm_sem, 0, SETVAL, 1); // initially unlocked workd like mutex
+    key_t sem_sm_key = SEM_SM_KEY;
+    int sm_sem = semget(sem_sm_key, 1, 0777 | IPC_CREAT);
+    // // initialize the semaphore to 1
+    semctl(sm_sem, 0, SETVAL, 1); // initially unlocked like mutex
     struct sembuf pop, vop;
     key_t sem1_key = SEM1_KEY;
     key_t sem2_key = SEM2_KEY;
-    int sem1 = semget(sem1_key, 1, 0777);
-    int sem2 = semget(sem2_key, 1, 0777);
+    int sem1 = semget(sem1_key, 1, 0777 | IPC_CREAT);
+    int sem2 = semget(sem2_key, 1, 0777 | IPC_CREAT);
 
     // initilaize both semaphores to 0
     semctl(sem1, 0, SETVAL, 0);
@@ -419,16 +456,16 @@ int main() {
     pop.sem_op = -1;
     vop.sem_op = 1;
     key_t sock_info_key = SOCK_INFO_KEY;
-    int sock_info = shmget(sock_info_key, sizeof(struct SOCKINFO), 0777);
+    int sock_info = shmget(sock_info_key, sizeof(struct SOCKINFO), 0777 | IPC_CREAT);
     struct SOCKINFO *sockinfo = (struct SOCKINFO *)shmat(sock_info, 0, 0);
     sockinfo->sock_id = 0;
     sockinfo->error_no = 0;
-    sockinfo->addr = 0;
+    // sockinfo->addr = 0;
 
     int shmid;
     key_t key = KEY;
-    shmid = shmget(key, N * sizeof(struct shared_memory), 0777);
-    struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
+    shmid = shmget(key, N * sizeof(struct shared_memory), 0777 | IPC_CREAT);
+    struct shared_memory *SM = (struct shared_memory *)shmat(shmid, 0, 0);
     for (int i = 0; i < N; i++) {
         SM[i].free = 1;
         SM[i].pid = -1;
@@ -443,11 +480,11 @@ int main() {
     pthread_attr_init(&r_attr);
     pthread_attr_init(&s_attr);
     pthread_attr_init(&g_attr);
-    pthread_create(&rid, NULL, R, NULL);
+    pthread_create(&rid, &r_attr, R, NULL);
     pthread_detach(rid);
-    pthread_create(&sid, NULL, S, NULL);
+    pthread_create(&sid, &s_attr, S, NULL);
     pthread_detach(sid);
-    pthread_create(&gid, NULL, G, NULL);
+    pthread_create(&gid, &g_attr, G, NULL);
     pthread_detach(gid);
 
     // need to attach?
@@ -458,19 +495,30 @@ int main() {
     while (1) {
         P(sem1);
         // do stuff here
+        printf("Main\n");
 
-        if (!(sockinfo->sock_id)) {
+        if ((sockinfo->sock_id) == 0) {
             // call socket here
 
-            sockinfo->sock_id = socket(AF_INET, SOCK_STREAM, 0);
+            sockinfo->sock_id = socket(AF_INET, SOCK_MTP, 0);
             if (sockinfo->sock_id < 0) {
+                perror("Socket problem\n");
                 sockinfo->error_no = errno;
                 sockinfo->sock_id = -1;
             }
         } else {
             // do stuff here
             // call bind here
-            if (bind(sockinfo->sock_id, (struct sockaddr *)sockinfo->addr, sizeof(struct sockaddr_in)) < 0) {
+            // printf("Socket id: %d\n", sockinfo->sock_id);
+            // printf("Port: %d\n", ntohs(sockinfo->addr.sin_port));
+            // printf("Family: %d\n", sockinfo->addr.sin_family);
+            // printf("Sock addr: %s\n", inet_ntoa(sockinfo->addr.sin_addr));
+            // printf("IP: %d\n", sockinfo->addr.sin_addr.s_addr);
+            fflush(stdout);
+            struct sockaddr_in serv;
+            socklen_t len = sizeof(serv);
+            if (bind(sockinfo->sock_id, (struct sockaddr *)(&sockinfo->addr), len) < 0) {
+                perror("Bind error here\n");
                 sockinfo->error_no = errno;
                 sockinfo->sock_id = -1;
             }

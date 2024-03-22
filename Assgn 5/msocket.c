@@ -1,14 +1,14 @@
+#include <arpa/inet.h>
 #include <errno.h>
 #include <msocket.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/shm.h>
 #include <sys/socket.h>
 #include <time.h>
-// #include<netinet/in.h>
-// #include<arpa/inet.h>
-#include <netdb.h>
 /*
 1) Avoid using strcpy just blindly copy since messages are of fixed (1000) bytes
 2)(wrong and ignore) Dereferencing void * into char --> *((char *)(ptr))
@@ -70,7 +70,7 @@ int m_socket(int domain, int type, int protocol) {
     }
     sockinfo->sock_id = 0;
     sockinfo->error_no = 0;
-    sockinfo->addr = 0;
+    // sockinfo->addr = 0;
 
     if (free_available == 0) {
         errno = ENOBUFS;
@@ -110,7 +110,9 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
     }
 
     // how do you initilaze this ?? can you do it this way?
-
+    // fflush(stdout);
+    // printf("Dest Addr: %d\n", (((struct sockaddr_in *)dest_addr)->sin_addr.s_addr));
+    // printf("Dest Addr Ip: %s\n", inet_ntoa(((struct sockaddr_in *)dest_addr)->sin_addr));
     SM[m_sockfd].addr = (struct sockaddr_in *)dest_addr;
     // initialze the send window
     SM[m_sockfd].swnd.send_window_size = 1;
@@ -154,13 +156,17 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
     int sem1 = semget(sem1_key, 1, 0777);
     int sem2 = semget(sem2_key, 1, 0777);
     // place its udp sock id in sockinfo
+    // printf("M_sockfd: %d\n", m_sockfd);
+    // printf("ADDR: %s\n",inet_ntoa(SM[m_sockfd].addr));
     sockinfo->sock_id = SM[m_sockfd].sockfd;
-    sockinfo->addr = SM[m_sockfd].addr;
+    sockinfo->addr = *(SM[m_sockfd].addr);
     sockinfo->error_no = 0;
+    printf("Sockinfo: %d, %s, %d\n", sockinfo->sock_id, inet_ntoa(sockinfo->addr.sin_addr), sockinfo->error_no);
     // signal till the init process
     V(sem1);
     // wait till the init process signals
     P(sem2);
+    printf("Semaphore complete\n");
     // error checking
     if (sockinfo->sock_id < 0) {
         errno = sockinfo->error_no;

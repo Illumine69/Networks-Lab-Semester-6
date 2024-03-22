@@ -4,16 +4,17 @@
 #include <sys/sem.h>
 #include <sys/shm.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <unistd.h>
 #define T 5
 #define p 0.05
 #define N 25
 #define SOCK_MTP SOCK_DGRAM
 #define KEY ftok("/tmp", 'a')
-#define SEM1_KEY ftok("/sem", 'a')
-#define SEM2_KEY ftok("/sem", 'b')
-#define SOCK_INFO_KEY ftok("/sockinfo", 'a')
-#define SEM_SM_KEY ftok("/sem_sm", 'a')
+#define SEM1_KEY ftok("/tmp", 'b')
+#define SEM2_KEY ftok("/tmp", 'c')
+#define SOCK_INFO_KEY ftok("/tmp", 'd')
+#define SEM_SM_KEY ftok("/tmp", 'e')
 #define P(s) semop(s, &pop, 1) /* pop is the structure we pass for doing \
                   the P(s) operation */
 #define V(s) semop(s, &vop, 1) /* vop is the structure we pass for doing \
@@ -37,7 +38,7 @@
 struct SOCKINFO {
     int sock_id;
     // ip address
-    struct sockaddr_in *addr;
+    struct sockaddr_in addr;
     int error_no;
 };
 

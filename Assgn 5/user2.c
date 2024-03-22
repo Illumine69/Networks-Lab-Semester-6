@@ -30,12 +30,13 @@ int main() {
     destaddr.sin_port = htons(8181);
     destaddr.sin_addr.s_addr = INADDR_ANY;
 
-    if (m_bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr), NULL, 0) == -1) {
+    if (m_bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr), (struct sockaddr *)&destaddr, sizeof(destaddr)) == -1) {
         printf("Error in binding\n");
         exit(1);
     }
-
-    int fd = open("read.txt", O_RDWR | O_CREAT, 0777);
+    printf("Here bind done\n");
+    fflush(stdout);
+    int fd = open("read.txt", O_WRONLY | O_CREAT, 0777);
     if (fd == -1) {
         printf("Error in opening file\n");
         exit(1);

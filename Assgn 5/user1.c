@@ -30,8 +30,9 @@ int main() {
     destaddr.sin_port = htons(10000);
     destaddr.sin_addr.s_addr = INADDR_ANY;
 
-    if (m_bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr), NULL, 0) == -1) {
-        printf("Error in binding\n");
+    if (m_bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr), (struct sockaddr *)&destaddr, sizeof(destaddr)) == -1) {
+        // printf("Error in binding\n");
+        perror("Error in binding");
         exit(1);
     }
 
@@ -40,7 +41,7 @@ int main() {
         printf("Error in opening file\n");
         exit(1);
     }
-
+    // printf("Here\n");
     char buffer[1000], main_buffer[1000];
     int n;
     while ((n = read(fd, buffer, 1000)) > 0) {
