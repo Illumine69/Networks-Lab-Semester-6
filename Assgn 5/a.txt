@@ -1,0 +1,365 @@
+Hi
+Receiver
+Timedout
+Receiver Leaving
+Sender
+n:0, SM[i].free:1
+n:1, SM[i].free:1
+n:2, SM[i].free:1
+n:3, SM[i].free:1
+n:4, SM[i].free:1
+n:5, SM[i].free:1
+n:6, SM[i].free:1
+n:7, SM[i].free:1
+n:8, SM[i].free:1
+n:9, SM[i].free:1
+n:10, SM[i].free:1
+n:11, SM[i].free:1
+n:12, SM[i].free:1
+n:13, SM[i].free:1
+n:14, SM[i].free:1
+n:15, SM[i].free:1
+n:16, SM[i].free:1
+n:17, SM[i].free:1
+n:18, SM[i].free:1
+n:19, SM[i].free:1
+n:20, SM[i].free:1
+n:21, SM[i].free:1
+n:22, SM[i].free:1
+n:23, SM[i].free:1
+n:24, SM[i].free:1
+Sender Leaving
+Receiver
+Timedout
+Receiver Leaving
+Sender
+n:0, SM[i].free:1
+n:1, SM[i].free:1
+n:2, SM[i].free:1
+n:3, SM[i].free:1
+n:4, SM[i].free:1
+n:5, SM[i].free:1
+n:6, SM[i].free:1
+n:7, SM[i].free:1
+n:8, SM[i].free:1
+n:9, SM[i].free:1
+n:10, SM[i].free:1
+n:11, SM[i].free:1
+n:12, SM[i].free:1
+n:13, SM[i].free:1
+n:14, SM[i].free:1
+n:15, SM[i].free:1
+n:16, SM[i].free:1
+n:17, SM[i].free:1
+n:18, SM[i].free:1
+n:19, SM[i].free:1
+n:20, SM[i].free:1
+n:21, SM[i].free:1
+n:22, SM[i].free:1
+n:23, SM[i].free:1
+n:24, SM[i].free:1
+Sender Leaving
+Receiver
+Timedout
+Receiver Leaving
+Sender
+n:0, SM[i].free:1
+n:1, SM[i].free:1
+n:2, SM[i].free:1
+n:3, SM[i].free:1
+n:4, SM[i].free:1
+n:5, SM[i].free:1
+n:6, SM[i].free:1
+n:7, SM[i].free:1
+n:8, SM[i].free:1
+n:9, SM[i].free:1
+n:10, SM[i].free:1
+n:11, SM[i].free:1
+n:12, SM[i].free:1
+n:13, SM[i].free:1
+n:14, SM[i].free:1
+n:15, SM[i].free:1
+n:16, SM[i].free:1
+n:17, SM[i].free:1
+n:18, SM[i].free:1
+n:19, SM[i].free:1
+n:20, SM[i].free:1
+n:21, SM[i].free:1
+n:22, SM[i].free:1
+n:23, SM[i].free:1
+n:24, SM[i].free:1
+Sender Leaving
+Receiver
+Timedout
+Receiver Leaving
+Sender
+n:0, SM[i].free:1
+n:1, SM[i].free:1
+n:2, SM[i].free:1
+n:3, SM[i].free:1
+n:4, SM[i].free:1
+n:5, SM[i].free:1
+n:6, SM[i].free:1
+n:7, SM[i].free:1
+n:8, SM[i].free:1
+n:9, SM[i].free:1
+n:10, SM[i].free:1
+n:11, SM[i].free:1
+n:12, SM[i].free:1
+n:13, SM[i].free:1
+n:14, SM[i].free:1
+n:15, SM[i].free:1
+n:16, SM[i].free:1
+n:17, SM[i].free:1
+n:18, SM[i].free:1
+n:19, SM[i].free:1
+n:20, SM[i].free:1
+n:21, SM[i].free:1
+n:22, SM[i].free:1
+n:23, SM[i].free:1
+n:24, SM[i].free:1
+Sender Leaving
+Receiver
+Timedout
+Receiver Leaving
+Sender
+n:0, SM[i].free:1
+n:1, SM[i].free:1
+n:2, SM[i].free:1
+n:3, SM[i].free:1
+n:4, SM[i].free:1
+n:5, SM[i].free:1
+n:6, SM[i].free:1
+n:7, SM[i].free:1
+n:8, SM[i].free:1
+n:9, SM[i].free:1
+n:10, SM[i].free:1
+n:11, SM[i].free:1
+n:12, SM[i].free:1
+n:13, SM[i].free:1
+n:14, SM[i].free:1
+n:15, SM[i].free:1
+n:16, SM[i].free:1
+n:17, SM[i].free:1
+n:18, SM[i].free:1
+n:19, SM[i].free:1
+n:20, SM[i].free:1
+n:21, SM[i].free:1
+n:22, SM[i].free:1
+n:23, SM[i].free:1
+n:24, SM[i].free:1
+Sender Leaving
+Receiver
+Timedout
+Receiver Leaving
+Sender
+n:0, SM[i].free:1
+n:1, SM[i].free:1
+n:2, SM[i].free:1
+n:3, SM[i].free:1
+n:4, SM[i].free:1
+n:5, SM[i].free:1
+n:6, SM[i].free:1
+n:7, SM[i].free:1
+n:8, SM[i].free:1
+n:9, SM[i].free:1
+n:10, SM[i].free:1
+n:11, SM[i].free:1
+n:12, SM[i].free:1
+n:13, SM[i].free:1
+n:14, SM[i].free:1
+n:15, SM[i].free:1
+n:16, SM[i].free:1
+n:17, SM[i].free:1
+n:18, SM[i].free:1
+n:19, SM[i].free:1
+n:20, SM[i].free:1
+n:21, SM[i].free:1
+n:22, SM[i].free:1
+n:23, SM[i].free:1
+n:24, SM[i].free:1
+Sender Leaving
+Receiver
+Timedout
+Receiver Leaving
+Sender
+n:0, SM[i].free:1
+n:1, SM[i].free:1
+n:2, SM[i].free:1
+n:3, SM[i].free:1
+n:4, SM[i].free:1
+n:5, SM[i].free:1
+n:6, SM[i].free:1
+n:7, SM[i].free:1
+n:8, SM[i].free:1
+n:9, SM[i].free:1
+n:10, SM[i].free:1
+n:11, SM[i].free:1
+n:12, SM[i].free:1
+n:13, SM[i].free:1
+n:14, SM[i].free:1
+n:15, SM[i].free:1
+n:16, SM[i].free:1
+n:17, SM[i].free:1
+n:18, SM[i].free:1
+n:19, SM[i].free:1
+n:20, SM[i].free:1
+n:21, SM[i].free:1
+n:22, SM[i].free:1
+n:23, SM[i].free:1
+n:24, SM[i].free:1
+Sender Leaving
+Receiver
+Timedout
+Receiver Leaving
+Sender
+n:0, SM[i].free:1
+n:1, SM[i].free:1
+n:2, SM[i].free:1
+n:3, SM[i].free:1
+n:4, SM[i].free:1
+n:5, SM[i].free:1
+n:6, SM[i].free:1
+n:7, SM[i].free:1
+n:8, SM[i].free:1
+n:9, SM[i].free:1
+n:10, SM[i].free:1
+n:11, SM[i].free:1
+n:12, SM[i].free:1
+n:13, SM[i].free:1
+n:14, SM[i].free:1
+n:15, SM[i].free:1
+n:16, SM[i].free:1
+n:17, SM[i].free:1
+n:18, SM[i].free:1
+n:19, SM[i].free:1
+n:20, SM[i].free:1
+n:21, SM[i].free:1
+n:22, SM[i].free:1
+n:23, SM[i].free:1
+n:24, SM[i].free:1
+Sender Leaving
+Receiver
+Timedout
+Receiver Leaving
+Sender
+n:0, SM[i].free:1
+n:1, SM[i].free:1
+n:2, SM[i].free:1
+n:3, SM[i].free:1
+n:4, SM[i].free:1
+n:5, SM[i].free:1
+n:6, SM[i].free:1
+n:7, SM[i].free:1
+n:8, SM[i].free:1
+n:9, SM[i].free:1
+n:10, SM[i].free:1
+n:11, SM[i].free:1
+n:12, SM[i].free:1
+n:13, SM[i].free:1
+n:14, SM[i].free:1
+n:15, SM[i].free:1
+n:16, SM[i].free:1
+n:17, SM[i].free:1
+n:18, SM[i].free:1
+n:19, SM[i].free:1
+n:20, SM[i].free:1
+n:21, SM[i].free:1
+n:22, SM[i].free:1
+n:23, SM[i].free:1
+n:24, SM[i].free:1
+Sender Leaving
+Receiver
+Timedout
+Receiver Leaving
+Sender
+n:0, SM[i].free:1
+n:1, SM[i].free:1
+n:2, SM[i].free:1
+n:3, SM[i].free:1
+n:4, SM[i].free:1
+n:5, SM[i].free:1
+n:6, SM[i].free:1
+n:7, SM[i].free:1
+n:8, SM[i].free:1
+n:9, SM[i].free:1
+n:10, SM[i].free:1
+n:11, SM[i].free:1
+n:12, SM[i].free:1
+n:13, SM[i].free:1
+n:14, SM[i].free:1
+n:15, SM[i].free:1
+n:16, SM[i].free:1
+n:17, SM[i].free:1
+n:18, SM[i].free:1
+n:19, SM[i].free:1
+n:20, SM[i].free:1
+n:21, SM[i].free:1
+n:22, SM[i].free:1
+n:23, SM[i].free:1
+n:24, SM[i].free:1
+Sender Leaving
+Receiver
+Timedout
+Receiver Leaving
+Sender
+n:0, SM[i].free:1
+n:1, SM[i].free:1
+n:2, SM[i].free:1
+n:3, SM[i].free:1
+n:4, SM[i].free:1
+n:5, SM[i].free:1
+n:6, SM[i].free:1
+n:7, SM[i].free:1
+n:8, SM[i].free:1
+n:9, SM[i].free:1
+n:10, SM[i].free:1
+n:11, SM[i].free:1
+n:12, SM[i].free:1
+n:13, SM[i].free:1
+n:14, SM[i].free:1
+n:15, SM[i].free:1
+n:16, SM[i].free:1
+n:17, SM[i].free:1
+n:18, SM[i].free:1
+n:19, SM[i].free:1
+n:20, SM[i].free:1
+n:21, SM[i].free:1
+n:22, SM[i].free:1
+n:23, SM[i].free:1
+n:24, SM[i].free:1
+Sender Leaving
+Receiver
+Timedout
+Receiver Leaving
+Sender
+n:0, SM[i].free:1
+n:1, SM[i].free:1
+n:2, SM[i].free:1
+n:3, SM[i].free:1
+n:4, SM[i].free:1
+n:5, SM[i].free:1
+n:6, SM[i].free:1
+n:7, SM[i].free:1
+n:8, SM[i].free:1
+n:9, SM[i].free:1
+n:10, SM[i].free:1
+n:11, SM[i].free:1
+n:12, SM[i].free:1
+n:13, SM[i].free:1
+n:14, SM[i].free:1
+n:15, SM[i].free:1
+n:16, SM[i].free:1
+n:17, SM[i].free:1
+n:18, SM[i].free:1
+n:19, SM[i].free:1
+n:20, SM[i].free:1
+n:21, SM[i].free:1
+n:22, SM[i].free:1
+n:23, SM[i].free:1
+n:24, SM[i].free:1
+Sender Leaving
+Receiver
+Timedout
+Receiver Leaving
+Sender
