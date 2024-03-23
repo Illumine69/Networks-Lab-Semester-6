@@ -23,13 +23,20 @@ int main() {
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(8181);
-    inet_aton("127.0.0.1", &servaddr.sin_addr);
+    // inet_aton("127.0.0.1", &servaddr.sin_addr);
+    servaddr.sin_addr.s_addr=inet_addr("10.145.129.34");
+    //print the address
+     printf("Address: %s\n", inet_ntoa(servaddr.sin_addr));
+     //port
+        printf("Port: %d\n", ntohs(servaddr.sin_port));
+        
 
     struct sockaddr_in destaddr;
     memset(&destaddr, 0, sizeof(destaddr));
     destaddr.sin_family = AF_INET;
     destaddr.sin_port = htons(10000);
-    inet_aton("127.0.0.1", &destaddr.sin_addr);
+    destaddr.sin_addr.s_addr=inet_addr("10.145.129.34");
+    //inet_aton("127.0.0.1", &destaddr.sin_addr);
 
     if (m_bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr), (struct sockaddr *)&destaddr, sizeof(destaddr)) == -1) {
         // printf("Error in binding\n");

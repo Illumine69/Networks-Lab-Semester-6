@@ -129,6 +129,7 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
 
     memset(SM[m_sockfd].swnd.unack_time, -1, sizeof(SM[m_sockfd].swnd.unack_time));
     memset(SM[m_sockfd].swnd.length, -1, sizeof(SM[m_sockfd].swnd.length));
+    memset(SM[m_sockfd].swnd.validmssg, 0, sizeof(SM[m_sockfd].swnd.validmssg));
 
     // initialze the receive window
     SM[m_sockfd].rwnd.receive_window_size = MAX_WINDOW_SIZE;
@@ -140,6 +141,7 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
 
     memset(SM[m_sockfd].rwnd.recv_msg, 0, sizeof(SM[m_sockfd].rwnd.recv_msg));
     memset(SM[m_sockfd].rwnd.msg_size, 0, sizeof(SM[m_sockfd].rwnd.msg_size));
+    
     // call the system bind call
     // int res =bind(SM[m_sockfd].sockfd, src_addr, src_addrlen);
     // signal the init process
@@ -164,6 +166,8 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
     sockinfo->sock_id = SM[m_sockfd].sockfd;
     sockinfo->addr = *((struct sockaddr_in *)src_addr);
     sockinfo->error_no = 0;
+    //print the source address
+  
     printf("Sockinfo: %d, %s, %d\n", sockinfo->sock_id, inet_ntoa(sockinfo->addr.sin_addr), ntohs(sockinfo->addr.sin_port));
     // signal till the init process
     V(sem1);
@@ -210,6 +214,7 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
     vop.sem_op = 1;
 
     P(sem);
+    printf("msfsf \n \n");
 
     // error checking
     if (SM == NULL) {
@@ -230,6 +235,7 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
     }
     if (SM[m_sockfd].pid != getpid()) {
         errno = EBADF;
+        perror("PID not same\n");
         V(sem);
         return -1;
     }
@@ -242,21 +248,27 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
     }
     if (SM[m_sockfd].swnd.start_index == (SM[m_sockfd].swnd.end_index + 1) % SEND_BUFFER_SIZE) {
         errno = ENOBUFS;
+        perror("Buffer is full");
         V(sem);
         return -1;
     }
     if (SM[m_sockfd].swnd.start_index == -1) { // To ensure ENOBUFS work correctly
         SM[m_sockfd].swnd.start_index = 0;
+        printf("karthik reddy\n");
     }
     // increment the end index
     SM[m_sockfd].swnd.end_index = (SM[m_sockfd].swnd.end_index + 1) % SEND_BUFFER_SIZE;
     // copy the message to the buffer
+    printf("Length: %d\n", length);
+    printf("ENd index: %d\n", SM[m_sockfd].swnd.end_index);
     for (int i = 0; i < length; i++) {
         SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i] = *((char *)(message + i));
     }
+    SM[m_sockfd].swnd.validmssg[SM[m_sockfd].swnd.end_index] = 1;
     SM[m_sockfd].swnd.length[SM[m_sockfd].swnd.end_index] = length;
 
     V(sem);
+    shmdt(SM);
     return 0;
     // who adds the header is it S or this function ?
     // it is s who adds the header
@@ -276,7 +288,7 @@ ssize_t m_recvfrom(int m_sockfd, void *restrict buffer, size_t length, int flags
     pop.sem_flg = vop.sem_flg = 0;
     pop.sem_op = -1;
     vop.sem_op = 1;
-
+    usleep(10000);
     P(sem);
 
     // error checking

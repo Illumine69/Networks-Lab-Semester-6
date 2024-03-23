@@ -46,6 +46,7 @@ struct swnd {
     int send_window_size;   // current send window size
     time_t unack_time[SEND_BUFFER_SIZE];
     int length[SEND_BUFFER_SIZE];
+    int validmssg[SEND_BUFFER_SIZE];
     int rem_buff_space;
     int start_index;        // start index in the buffer
     int last_sent_index;    // last sent messages index in the buffer
