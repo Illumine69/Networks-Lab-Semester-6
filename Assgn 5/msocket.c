@@ -113,30 +113,33 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
     // fflush(stdout);
     // printf("Dest Addr: %d\n", (((struct sockaddr_in *)dest_addr)->sin_addr.s_addr));
     // printf("Dest Addr Ip: %s\n", inet_ntoa(((struct sockaddr_in *)dest_addr)->sin_addr));
-    SM[m_sockfd].addr = (struct sockaddr_in *)dest_addr;
+    SM[m_sockfd].addr = *((struct sockaddr_in *)dest_addr);
     // initialze the send window
-    SM[m_sockfd].swnd.send_window_size = 1;
+    SM[m_sockfd].swnd.send_window_size = RECV_BUFFER_SIZE;
 
     // SM[m_sockfd].swnd.last_ack=0;// COZ numbering starrts from 1
     SM[m_sockfd].swnd.rem_buff_space = SEND_BUFFER_SIZE;
-    SM[m_sockfd].swnd.start_index = 0;
-    SM[m_sockfd].swnd.end_index = 0;
+    SM[m_sockfd].swnd.start_index = -1;
+    SM[m_sockfd].swnd.last_sent_index = -1;
+    SM[m_sockfd].swnd.end_index = -1;
     SM[m_sockfd].swnd.start_index_ack_no = 0;
-    SM[m_sockfd].swnd.last_sent_index = 0;
+    SM[m_sockfd].swnd.last_sent_ack_no = 0;
 
     // memset(SM[m_sockfd].swnd.unack_msg,-1,sizeof(SM[m_sockfd].swnd.unack_msg));
 
     memset(SM[m_sockfd].swnd.unack_time, -1, sizeof(SM[m_sockfd].swnd.unack_time));
+    memset(SM[m_sockfd].swnd.length, -1, sizeof(SM[m_sockfd].swnd.length));
 
     // initialze the receive window
     SM[m_sockfd].rwnd.receive_window_size = MAX_WINDOW_SIZE;
-    SM[m_sockfd].rwnd.last_inorder_msg = 0; // Cause numbering starts from 1
+    SM[m_sockfd].rwnd.last_inorder_msg = -1; // Cause numbering starts from 1
     SM[m_sockfd].rwnd.last_inorder_msg_seq_num = 0;
-    SM[m_sockfd].rwnd.start_index = 1;
+    SM[m_sockfd].rwnd.start_index = 0;
     SM[m_sockfd].rwnd.start_seq_num = 0;
     SM[m_sockfd].rwnd.nospace = 0;
 
     memset(SM[m_sockfd].rwnd.recv_msg, 0, sizeof(SM[m_sockfd].rwnd.recv_msg));
+    memset(SM[m_sockfd].rwnd.msg_size, 0, sizeof(SM[m_sockfd].rwnd.msg_size));
     // call the system bind call
     // int res =bind(SM[m_sockfd].sockfd, src_addr, src_addrlen);
     // signal the init process
@@ -159,9 +162,9 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
     // printf("M_sockfd: %d\n", m_sockfd);
     // printf("ADDR: %s\n",inet_ntoa(SM[m_sockfd].addr));
     sockinfo->sock_id = SM[m_sockfd].sockfd;
-    sockinfo->addr = *(SM[m_sockfd].addr);
+    sockinfo->addr = *((struct sockaddr_in *)src_addr);
     sockinfo->error_no = 0;
-    printf("Sockinfo: %d, %s, %d\n", sockinfo->sock_id, inet_ntoa(sockinfo->addr.sin_addr), sockinfo->error_no);
+    printf("Sockinfo: %d, %s, %d\n", sockinfo->sock_id, inet_ntoa(sockinfo->addr.sin_addr), ntohs(sockinfo->addr.sin_port));
     // signal till the init process
     V(sem1);
     // wait till the init process signals
@@ -216,7 +219,7 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
         return -1;
     }
     // check if port and ip are same
-    if ((SM[m_sockfd].addr->sin_port != ((struct sockaddr_in *)dest_addr)->sin_port) || (SM[m_sockfd].addr->sin_addr.s_addr != ((struct sockaddr_in *)dest_addr)->sin_addr.s_addr)) {
+    if ((SM[m_sockfd].addr.sin_port != ((struct sockaddr_in *)dest_addr)->sin_port) || (SM[m_sockfd].addr.sin_addr.s_addr != ((struct sockaddr_in *)dest_addr)->sin_addr.s_addr)) {
         errno = ENOTCONN;
         printf("Port and IP are not same\n");
         return -1;
@@ -225,11 +228,14 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
         errno = ENOBUFS;
         return -1;
     }
+    if (SM[m_sockfd].swnd.start_index == -1) { // To ensure ENOBUFS work correctly
+        SM[m_sockfd].swnd.start_index = 0;
+    }
     // increment the end index
     SM[m_sockfd].swnd.end_index = (SM[m_sockfd].swnd.end_index + 1) % SEND_BUFFER_SIZE;
     // copy the message to the buffer
     for (int i = 0; i < length; i++) {
-        SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i] = *((char*)(message + i));
+        SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i] = *((char *)(message + i));
     }
     SM[m_sockfd].swnd.length[SM[m_sockfd].swnd.end_index] = length;
 
@@ -245,37 +251,54 @@ ssize_t m_recvfrom(int m_sockfd, void *restrict buffer, size_t length, int flags
     int shmid = shmget(key, N * sizeof(struct shared_memory), 0777);
     struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
 
+    key_t sem_key = SEM_SM_KEY;
+    int sem = semget(sem_key, 1, 0777);
+    struct sembuf pop, vop;
+    pop.sem_num = vop.sem_num = 0;
+    pop.sem_flg = vop.sem_flg = 0;
+    pop.sem_op = -1;
+    vop.sem_op = 1;
+
+    P(sem);
+
     // error checking
     if (SM == NULL) {
         errno = ENOMEM;
         printf("Init process not called \n");
+        V(sem);
         return -1;
     }
 
     // If the socket is free
     if (SM[m_sockfd].free == 1) {
         errno = EBADF;
+        V(sem);
         return -1;
     }
 
-    for (int i = 0; i < RECV_BUFFER_SIZE; i++) {
-        // Assuming that the R process stores only the actual message in the Receive buffer ending with <crlf>
-        if (SM[m_sockfd].recv_buffer[i][0] != '\r' && SM[m_sockfd].recv_buffer[i][1] != '\n') {
-            int j = 0;
-            while (SM[m_sockfd].recv_buffer[i][j] != '\r' && SM[m_sockfd].recv_buffer[i][j + 1] != '\n') {
-                *((char *)buffer + j) = SM[m_sockfd].recv_buffer[i][j];
-                j++;
-            }
-            memset(SM[m_sockfd].recv_buffer[i], '\0', 1000);
-            SM[m_sockfd].recv_buffer[i][0] = '\r';
-            SM[m_sockfd].recv_buffer[i][1] = '\n';
-            shmdt(SM);
-            return j;
-        }
+    int i = SM[m_sockfd].rwnd.start_index;
+    printf("Start index: %d\n", i);
+    printf("recv msg: %d\n", SM[m_sockfd].rwnd.recv_msg[i]);
+    if (SM[m_sockfd].rwnd.recv_msg[i] == 0) {
+        errno = ENOMSG;
+        V(sem);
+        return -1;
     }
-    shmdt(SM);
-    errno = ENOMSG;
-    return -1;
+    printf("Msg size: %d\n", SM[m_sockfd].rwnd.msg_size[i]);
+    // Copy the message to the buffer
+    for (int j = 0; j < SM[m_sockfd].rwnd.msg_size[i]; j++) {
+        // printf("%c", SM[m_sockfd].recv_buffer[i][j]);
+        *((char *)(buffer + j)) = SM[m_sockfd].recv_buffer[i][j];
+        printf("%c", *((char *)(buffer + j)));
+    }
+    int res = SM[m_sockfd].rwnd.msg_size[i];
+    SM[m_sockfd].rwnd.recv_msg[i] = 0;
+    SM[m_sockfd].rwnd.msg_size[i] = 0;
+    SM[m_sockfd].rwnd.start_index = (SM[m_sockfd].rwnd.start_index + 1) % RECV_BUFFER_SIZE;
+    SM[m_sockfd].rwnd.start_seq_num = (SM[m_sockfd].rwnd.start_seq_num) % MAX_SEQ_NUM + 1;
+
+    V(sem);
+    return res;
 }
 
 int m_close(int m_sockfd) {

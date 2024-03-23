@@ -43,20 +43,19 @@ struct SOCKINFO {
 };
 
 struct swnd {
-    // chose to implemet circular buffer
-    int send_window_size; // current send window size
-    // int last_ack;                   //last ack received
-    // int unack_msg[5];               //unacknowledged messages
+    int send_window_size;   // current send window size
     time_t unack_time[SEND_BUFFER_SIZE];
     int length[SEND_BUFFER_SIZE];
     int rem_buff_space;
-    // int last_sent;                  //last sent message
-    // time at which the message was sent
     int start_index;        // start index in the buffer
     int last_sent_index;    // last sent messages index in the buffer
     int end_index;          // end index in the buffer
     int start_index_ack_no; // ack no of the start index
     int last_sent_ack_no;   // ack no of the last sent index
+    // time at which the message was sent
+    // int last_sent;                  //last sent message
+    // int unack_msg[5];               //unacknowledged messages
+    // int last_ack;                   //last ack received
 };
 
 // start index should always be less than last_inorder_msg
@@ -65,16 +64,17 @@ struct rwnd {
     int last_inorder_msg;           // last in-order message received
     int last_inorder_msg_seq_num;   // sequence number of the last in-order message
     int recv_msg[RECV_BUFFER_SIZE]; // received messages
+    int msg_size[RECV_BUFFER_SIZE]; // size of the received messages
     int start_index;                // start index in the receive buffer to send to user
     int start_seq_num;              // sequence number of the start index
-    int nospace; // set if receive_window_size becomes 0
+    int nospace;                    // set if receive_window_size becomes 0
 };
 
 struct shared_memory {
     int free;
     int pid;
     int sockfd;
-    struct sockaddr_in *addr;
+    struct sockaddr_in addr;
     char send_buffer[SEND_BUFFER_SIZE][1000];
     char recv_buffer[RECV_BUFFER_SIZE][1000];
     struct swnd swnd;
