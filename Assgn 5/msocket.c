@@ -200,32 +200,49 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
     // printf("M_sockfd: %d\n", m_sockfd);
     int shmid = shmget(key, N * sizeof(struct shared_memory), 0777);
     struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
+
+    key_t sem_key = SEM_SM_KEY;
+    int sem = semget(sem_key, 1, 0777);
+    struct sembuf pop, vop;
+    pop.sem_num = vop.sem_num = 0;
+    pop.sem_flg = vop.sem_flg = 0;
+    pop.sem_op = -1;
+    vop.sem_op = 1;
+
+    P(sem);
+
     // error checking
     if (SM == NULL) {
         errno = ENOMEM;
         printf("Init process not called \n");
+        V(sem);
         return -1;
     }
     if (m_sockfd < 0 || m_sockfd >= N) {
         errno = EBADF;
+        V(sem);
         return -1;
     }
     if (SM[m_sockfd].free == 1) {
         errno = EBADF;
+        V(sem);
         return -1;
     }
     if (SM[m_sockfd].pid != getpid()) {
         errno = EBADF;
+        V(sem);
         return -1;
     }
     // check if port and ip are same
     if ((SM[m_sockfd].addr.sin_port != ((struct sockaddr_in *)dest_addr)->sin_port) || (SM[m_sockfd].addr.sin_addr.s_addr != ((struct sockaddr_in *)dest_addr)->sin_addr.s_addr)) {
         errno = ENOTCONN;
         printf("Port and IP are not same\n");
+        V(sem);
         return -1;
     }
     if (SM[m_sockfd].swnd.start_index == (SM[m_sockfd].swnd.end_index + 1) % SEND_BUFFER_SIZE) {
         errno = ENOBUFS;
+        V(sem);
         return -1;
     }
     if (SM[m_sockfd].swnd.start_index == -1) { // To ensure ENOBUFS work correctly
@@ -239,6 +256,7 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
     }
     SM[m_sockfd].swnd.length[SM[m_sockfd].swnd.end_index] = length;
 
+    V(sem);
     return 0;
     // who adds the header is it S or this function ?
     // it is s who adds the header
