@@ -18,7 +18,6 @@
 */
 
 int m_socket(int domain, int type, int protocol) {
-    int sockfd;
     if (type != SOCK_MTP) {
         errno = EINVAL;
         return -1;
@@ -314,6 +313,8 @@ ssize_t m_recvfrom(int m_sockfd, void *restrict buffer, size_t length, int flags
     SM[m_sockfd].rwnd.msg_size[i] = 0;
     SM[m_sockfd].rwnd.start_index = (SM[m_sockfd].rwnd.start_index + 1) % RECV_BUFFER_SIZE;
     SM[m_sockfd].rwnd.start_seq_num = (SM[m_sockfd].rwnd.start_seq_num) % MAX_SEQ_NUM + 1;
+    *address = *((struct sockaddr *)&(SM[m_sockfd].addr));
+    *address_len = sizeof(SM[m_sockfd].addr);
 
     V(sem);
     return res;

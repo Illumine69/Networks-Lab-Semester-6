@@ -43,7 +43,7 @@ int main() {
         exit(1);
     }
     // printf("Here\n");
-    char buffer[1000], main_buffer[1000];
+    char buffer[1000];
     int n;
     while ((n = read(fd, buffer, 1000)) > 0) {
         // TODO: ensure that only 1000 bytes are sent at a time

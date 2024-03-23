@@ -70,7 +70,7 @@ void *R(void *params) {
     // should use select call with timer
     fd_set master;
     FD_ZERO(&master);
-    int max_fd = 0;
+    int max_fd = -1;
 
     // set all the file descriptors in the master set
     for (int i = 0; i < N; i++) {
@@ -132,6 +132,7 @@ void *R(void *params) {
             for (int i = 0; i < N; i++) {
                 if (SM[i].rwnd.nospace == 1 && SM[i].rwnd.receive_window_size != 0) {
                     // Send duplicate ACK
+                    
                     SM[i].rwnd.nospace = 0;
                 }
             }
@@ -145,7 +146,10 @@ void *R(void *params) {
                     struct sockaddr_in sender_addr;
                     socklen_t sender_len;
                     int n = recvfrom(SM[i].sockfd, recv_buffer, 1500, 0, (struct sockaddr *)&sender_addr, &sender_len);
-                    // TODO: Implement dropMessage function
+                    // dropMessage function
+                    // if(dropMessage(p) == 1){
+                    //     break;
+                    // }
                     printf("Message From: %s\n", inet_ntoa(sender_addr.sin_addr));
                     printf("Port: %d\n", ntohs(sender_addr.sin_port));
                     if (n < 0) {

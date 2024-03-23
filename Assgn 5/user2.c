@@ -45,7 +45,7 @@ int main() {
     char buffer[1000];
     int n;
     while (1) {
-        n = m_recvfrom(sockfd, buffer, 1000, 0, (struct sockaddr *)&destaddr, sizeof(destaddr));
+        n = m_recvfrom(sockfd, buffer, 1000, 0, NULL, NULL);
         if (n == -1) {
             perror("Error in receiving\n");
             continue;
