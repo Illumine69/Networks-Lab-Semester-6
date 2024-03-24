@@ -140,7 +140,7 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
 
     memset(SM[m_sockfd].rwnd.recv_msg, 0, sizeof(SM[m_sockfd].rwnd.recv_msg));
     memset(SM[m_sockfd].rwnd.msg_size, 0, sizeof(SM[m_sockfd].rwnd.msg_size));
-    
+
     // call the system bind call
     // int res =bind(SM[m_sockfd].sockfd, src_addr, src_addrlen);
     // signal the init process
@@ -165,8 +165,8 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
     sockinfo->sock_id = SM[m_sockfd].sockfd;
     sockinfo->addr = *((struct sockaddr_in *)src_addr);
     sockinfo->error_no = 0;
-    //print the source address
-  
+    // print the source address
+
     printf("Sockinfo: %d, %s, %d\n", sockinfo->sock_id, inet_ntoa(sockinfo->addr.sin_addr), ntohs(sockinfo->addr.sin_port));
     // signal till the init process
     V(sem1);
@@ -260,8 +260,10 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
     // copy the message to the buffer
     printf("Length: %d\n", length);
     printf("ENd index: %d\n", SM[m_sockfd].swnd.end_index);
+    printf("Storing message in send buffer(m_sendto): \n");
     for (int i = 0; i < length; i++) {
         SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i] = *((char *)(message + i));
+        printf("%c", SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i]);
     }
     SM[m_sockfd].swnd.validmssg[SM[m_sockfd].swnd.end_index] = 1;
     SM[m_sockfd].swnd.length[SM[m_sockfd].swnd.end_index] = length;
@@ -325,8 +327,8 @@ ssize_t m_recvfrom(int m_sockfd, void *restrict buffer, size_t length, int flags
     SM[m_sockfd].rwnd.msg_size[i] = 0;
     SM[m_sockfd].rwnd.start_index = (SM[m_sockfd].rwnd.start_index + 1) % RECV_BUFFER_SIZE;
     SM[m_sockfd].rwnd.start_seq_num = (SM[m_sockfd].rwnd.start_seq_num) % MAX_SEQ_NUM + 1;
-    *address = *((struct sockaddr *)&(SM[m_sockfd].addr));
-    *address_len = sizeof(SM[m_sockfd].addr);
+    // *address = *((struct sockaddr *)&(SM[m_sockfd].addr));
+    // *address_len = sizeof(SM[m_sockfd].addr);
 
     V(sem);
     return res;
@@ -339,6 +341,17 @@ int m_close(int m_sockfd) {
     struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
 
     if (SM[m_sockfd].free == 0) {
+        int unacked = 0;
+        for (int j = 0; j < SEND_BUFFER_SIZE; j++) {
+            if (SM[m_sockfd].swnd.validmssg[j] == 1) {
+                unacked = 1;
+                break;
+            }
+        }
+        if (unacked == 1) {
+            errno = EBUSY;
+            return -1;
+        }
         // memset(&SM[m_sockfd], NULL, sizeof(struct shared_memory));
         SM[m_sockfd].free = 1;
     } else {

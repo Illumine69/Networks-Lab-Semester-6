@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <errno.h>
+#include <sys/stat.h>
 
 int main() {
     int sockfd = m_socket(AF_INET, SOCK_MTP, 0);
@@ -23,14 +25,14 @@ int main() {
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(10000);
-    //inet_aton("127.0.0.1", &servaddr.sin_addr);
-    servaddr.sin_addr.s_addr=inet_addr("10.145.129.34");
+    // inet_aton("127.0.0.1", &servaddr.sin_addr);
+    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     struct sockaddr_in destaddr;
     memset(&destaddr, 0, sizeof(destaddr));
     destaddr.sin_family = AF_INET;
     destaddr.sin_port = htons(8181);
-    destaddr.sin_addr.s_addr=inet_addr("10.145.129.34");
-    //inet_aton("127.0.0.1", &destaddr.sin_addr);
+    destaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    // inet_aton("127.0.0.1", &destaddr.sin_addr);
 
     if (m_bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr), (struct sockaddr *)&destaddr, sizeof(destaddr)) == -1) {
         printf("Error in binding\n");
@@ -62,15 +64,15 @@ int main() {
         }
         printf("Writing %d bytes\n", val);
     }
-    // while ((n = m_recvfrom(sockfd, buffer, 1000, 0, (struct sockaddr *)&destaddr, sizeof(destaddr)) > 0)) {
 
-    //     write(fd, buffer, n);
-    // }
-
-    // if (m_close(sockfd) == -1) {
-    //     printf("Error in closing socket\n");
-    //     exit(1);
-    // }
+    if (m_close(sockfd) == -1) {
+        if (errno == EBUSY) {
+            printf("Closing socket\n");
+            exit(1);
+        }
+        perror("Error in closing socket\n");
+        exit(1);
+    }
 
     return 0;
 }
