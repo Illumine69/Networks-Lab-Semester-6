@@ -44,7 +44,7 @@ int main() {
         exit(1);
     }
 
-    int fd = open("send.txt", O_RDONLY);
+    int fd = open("send.txt", O_RDONLY);    // Input file name
     if (fd == -1) {
         printf("Error in opening file\n");
         exit(1);

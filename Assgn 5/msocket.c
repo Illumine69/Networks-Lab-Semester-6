@@ -9,13 +9,6 @@
 #include <sys/shm.h>
 #include <sys/socket.h>
 #include <time.h>
-/*
-1) Avoid using strcpy just blindly copy since messages are of fixed (1000) bytes
-2)(wrong and ignore) Dereferencing void * into char --> *((char *)(ptr))
-2) Mutexes not included to be taken care later
-3) didnt set one of the errors in m_bind
-
-*/
 
 int m_socket(int domain, int type, int protocol) {
     if (type != SOCK_MTP) {
@@ -86,12 +79,10 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
     pop.sem_op = -1;
     vop.sem_op = 1;
 
-    // initialze the buff?
 
     key_t key = KEY;
     int shmid = shmget(key, N * sizeof(struct shared_memory), 0777);
     struct shared_memory *SM = (struct shared_memory *)shmat(shmid, NULL, 0);
-    // lock the shared memory ? not required as only this process is aceesing when m_bind is in progress
 
     // fill the entry in shared memory
     // before filling do error checking;
@@ -108,8 +99,6 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
         return -1;
     }
 
-    // how do you initilaze this ?? can you do it this way?
-    // fflush(stdout);
     // printf("Dest Addr: %d\n", (((struct sockaddr_in *)dest_addr)->sin_addr.s_addr));
     // printf("Dest Addr Ip: %s\n", inet_ntoa(((struct sockaddr_in *)dest_addr)->sin_addr));
     SM[m_sockfd].addr = *((struct sockaddr_in *)dest_addr);
@@ -180,7 +169,6 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
     }
     // reset all the values to 0
 
-    // can you do this ? or manually reset all the values to 0??
     memset(sockinfo, 0, sizeof(struct SOCKINFO));
 
     // unlock the shared memory
@@ -198,7 +186,6 @@ int m_bind(int m_sockfd, const struct sockaddr *src_addr, socklen_t src_addrlen,
 ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_addrlen) {
     // first attach to shared memory
 
-    // need to use mutexes
     key_t key = KEY;
     // printf("M_sockfd: %d\n", m_sockfd);
     int shmid = shmget(key, N * sizeof(struct shared_memory), 0777);
@@ -213,7 +200,7 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
     vop.sem_op = 1;
 
     P(sem);
-    printf("msfsf \n \n");
+    // printf("msfsf \n \n");
 
     // error checking
     if (SM == NULL) {
@@ -253,7 +240,7 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
     }
     if (SM[m_sockfd].swnd.start_index == -1) { // To ensure ENOBUFS work correctly
         SM[m_sockfd].swnd.start_index = 0;
-        printf("karthik reddy\n");
+        // printf("karthik reddy\n");
     }
     // increment the end index
     SM[m_sockfd].swnd.end_index = (SM[m_sockfd].swnd.end_index + 1) % SEND_BUFFER_SIZE;
@@ -263,7 +250,7 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
     printf("Storing message in send buffer(m_sendto): \n");
     for (int i = 0; i < length; i++) {
         SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i] = *((char *)(message + i));
-        printf("%c", SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i]);
+        // printf("%c", SM[m_sockfd].send_buffer[SM[m_sockfd].swnd.end_index][i]);
     }
     SM[m_sockfd].swnd.validmssg[SM[m_sockfd].swnd.end_index] = 1;
     SM[m_sockfd].swnd.length[SM[m_sockfd].swnd.end_index] = length;
@@ -271,8 +258,6 @@ ssize_t m_sendto(int m_sockfd, const void *message, size_t length, int flags, co
     V(sem);
     shmdt(SM);
     return 0;
-    // who adds the header is it S or this function ?
-    // it is s who adds the header
 }
 
 ssize_t m_recvfrom(int m_sockfd, void *restrict buffer, size_t length, int flags, struct sockaddr *restrict address, socklen_t *restrict address_len) {
@@ -309,7 +294,7 @@ ssize_t m_recvfrom(int m_sockfd, void *restrict buffer, size_t length, int flags
 
     int i = SM[m_sockfd].rwnd.start_index;
     printf("Start index: %d\n", i);
-    printf("recv msg: %d\n", SM[m_sockfd].rwnd.recv_msg[i]);
+    // printf("recv msg: %d\n", SM[m_sockfd].rwnd.recv_msg[i]);
     if (SM[m_sockfd].rwnd.recv_msg[i] == 0) {
         errno = ENOMSG;
         V(sem);
@@ -320,7 +305,7 @@ ssize_t m_recvfrom(int m_sockfd, void *restrict buffer, size_t length, int flags
     for (int j = 0; j < SM[m_sockfd].rwnd.msg_size[i]; j++) {
         // printf("%c", SM[m_sockfd].recv_buffer[i][j]);
         *((char *)(buffer + j)) = SM[m_sockfd].recv_buffer[i][j];
-        printf("%c", *((char *)(buffer + j)));
+        // printf("%c", *((char *)(buffer + j)));
     }
     int res = SM[m_sockfd].rwnd.msg_size[i];
     SM[m_sockfd].rwnd.recv_msg[i] = 0;

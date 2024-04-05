@@ -25,8 +25,6 @@
 
 #define MAX_WINDOW_SIZE 10 // define this properly what should be the max window size ?? this should be less than than the buffer size and also the no of bits in the sequence number
 
-// let say your sequence numbers vary from 01 to 15
-
 #define MAX_SEQ_NUM 15 // you need to use %15 +1 to get the next sequence number
 
 // header syntax ::
@@ -53,10 +51,6 @@ struct swnd {
     int end_index;          // end index in the buffer
     int start_index_ack_no; // ack no of the start index
     int last_sent_ack_no;   // ack no of the last sent index
-    // time at which the message was sent
-    // int last_sent;                  //last sent message
-    // int unack_msg[5];               //unacknowledged messages
-    // int last_ack;                   //last ack received
 };
 
 // start index should always be less than last_inorder_msg

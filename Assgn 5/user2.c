@@ -40,7 +40,7 @@ int main() {
     }
     printf("Here bind done\n");
     fflush(stdout);
-    int fd = open("read.txt", O_RDWR | O_CREAT, 0777);
+    int fd = open("read.txt", O_RDWR | O_CREAT, 0777);  // Store message in this file
     if (fd == -1) {
         printf("Error in opening file\n");
         exit(1);
