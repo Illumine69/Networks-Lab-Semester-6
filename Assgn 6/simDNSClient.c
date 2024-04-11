@@ -18,6 +18,9 @@ File: simDNSClient.c
 #include <sys/socket.h>
 #include <unistd.h>
 
+#define MAX_SIZE 500
+#define BUF_SIZE 1000
+const int timeout = 5;
 /*
 simDNS Query Packet
 1) ID: 16 bits
@@ -31,11 +34,11 @@ simDNS Response Packet
 3) Number of Responses: 3 bits
 4) Response Strings: Multiple of 33 bits
 */
-
+                                                                                                                                                                                            
 int main(int argc, char *argv[]) {
 
     if (argc != 2) {
-        printf("Usage: %s <destination IP>\n", argv[0]);
+        printf("Usage: %s <Server IP>\n", argv[0]);
         exit(1);
     }
 
@@ -54,17 +57,18 @@ int main(int argc, char *argv[]) {
     // Query Table
     typedef struct querytable {
         int valid;
+        int retry;
         char domain[8][32];
+        char query[BUF_SIZE];
     } querytable;
 
-    querytable query_table[500];
+    querytable query_table[MAX_SIZE];
 
     // Initialize the query table
-    for (int i = 0; i < 500; i++) {
+    for (int i = 0; i < MAX_SIZE; i++) {
         query_table[i].valid = 0;
+        query_table[i].retry = 0;
     }
-    fflush(stdout);
-    printf("Here\n");
 
     fd_set master;
     FD_ZERO(&master);
@@ -72,7 +76,7 @@ int main(int argc, char *argv[]) {
     FD_SET(sockfd, &master);
     int maxfd = sockfd;
     struct timeval timer;
-    timer.tv_sec = 60;
+    timer.tv_sec = timeout;
     timer.tv_usec = 0;
 
     while (1) {
@@ -84,15 +88,54 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
         if (result == 0) {
-            printf("\nTimeout!\n");
-            timer.tv_sec = 5;
+            for (int i = 0; i < MAX_SIZE; i++) {
+                if (query_table[i].valid == 1) {
+                    if (query_table[i].retry < 3) {
+
+                        // Open a raw socket to send the packets
+                        int sendsockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+                        if (sendsockfd < 0) {
+                            perror("repeat send socket() failed");
+                            exit(1);
+                        }
+
+                        // Set the IP_HDRINCL option
+                        int one = 1;
+                        if (setsockopt(sendsockfd, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one)) < 0) {
+                            perror("repeat setsockopt() failed");
+                            exit(1);
+                        }
+
+                        struct iphdr *ip = (struct iphdr *)query_table[i].query;
+
+                        // Send the query packet
+                        struct sockaddr_in dest;
+                        dest.sin_family = AF_INET;
+                        dest.sin_port = htons(10000);
+                        dest.sin_addr.s_addr = ip->daddr;
+
+                        if (sendto(sendsockfd, query_table[i].query, ip->tot_len, 0, (struct sockaddr *)&dest, sizeof(dest)) < 0) {
+                            perror("sendto() failed");
+                            exit(1);
+                        }
+                        close(sendsockfd);
+                        query_table[i].retry++;
+                    } else {
+                        // Delete the ID from pending query table
+                        query_table[i].valid = 0;
+                        printf("\nNo response for Query ID %d detected even after 3 tries!\n", i);
+                    }
+                }
+            }
+
+            timer.tv_sec = timeout;
             timer.tv_usec = 0;
             continue;
         }
         if (FD_ISSET(0, &readfds)) {
+
             // Get query string from user
             char query[100];
-            // printf("\n\nEnter the query string: ");
             fgets(query, 100, stdin);
 
             if (strncmp(query, "EXIT", 4) == 0) {
@@ -165,7 +208,6 @@ int main(int argc, char *argv[]) {
                 strcpy(domain[cnt - 1], word);
             }
             if (error_val) {
-                printf("\nError: Invalid domain name!\n");
                 continue;
             }
             if (cnt != n) {
@@ -174,7 +216,7 @@ int main(int argc, char *argv[]) {
             }
 
             // Create the query packet
-            char message[65536];
+            char message[BUF_SIZE];
 
             char *messagePtr = message;
 
@@ -216,20 +258,8 @@ int main(int argc, char *argv[]) {
                 strncpy(query_table[msg_num].domain[i], domain[i], domainSize);
             }
 
-            // Increment the message number
-            msg_num = (msg_num + 1) % 65536;
-
-            // // Print the query packet
-            // printf("\nQuery Packet: ");
-            // for (int i = 0; i < (messagePtr - message + 1); i++) {
-            //     for (int j = 7; j >= 0; j--) {
-            //         printf("%d", (message[i] & (1 << j)) >> j);
-            //     }
-            //     printf(" ");
-            // }
-
             // Set the IP header
-            char buffer[65536];
+            char buffer[BUF_SIZE];
             memset(buffer, 0, sizeof(buffer));
             struct iphdr *ip = (struct iphdr *)buffer;
 
@@ -238,11 +268,9 @@ int main(int argc, char *argv[]) {
             ip->tos = 0;
             ip->tot_len = sizeof(struct iphdr) + (messagePtr - message + 1);
             ip->id = htons(12345);
-            // ip->frag_off = 0;
             ip->ttl = 64;
             ip->protocol = 254;
             ip->check = 0;
-            // set source ip address as system ip address
             ip->saddr = INADDR_ANY;
             ip->daddr = dest_addr;
 
@@ -273,12 +301,18 @@ int main(int argc, char *argv[]) {
                 perror("sendto() failed");
                 exit(1);
             }
+
+            // Store the buffer in the query table
+            memcpy(query_table[msg_num].query, buffer, ip->tot_len);
+
             close(sendsockfd);
+            // Increment the message number
+            msg_num = (msg_num + 1) % MAX_SIZE;
         }
         if (FD_ISSET(sockfd, &readfds)) {
             // Receive the response packet
-            char buffer[65536];
-            int len = recv(sockfd, buffer, 65536, 0);
+            char buffer[BUF_SIZE];
+            int len = recv(sockfd, buffer, BUF_SIZE, 0);
             if (len < 0) {
                 perror("recv() failed");
                 exit(1);
@@ -287,19 +321,13 @@ int main(int argc, char *argv[]) {
             // Extract the IP header from the received packet
             struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
 
-            // Get the server IP details and store in s_addr
-            struct sockaddr_in server;
-            server.sin_addr.s_addr = ip->saddr;
-
-            // // Check if IP is correct
-            // if (server.sin_addr.s_addr != inet_addr("127.0.0.1")) {
-            //     printf("\nServer IP is not correct!\n");
-            //     continue;
-            // }
-
             // Check the protocol field and drop if not 254
             if (ip->protocol != 254) {
-                // printf("\nProtocol is not 254!\n");
+                continue;
+            }
+
+            // Check the sender IP address and drop if not the client
+            if (ip->saddr != dest_addr) {
                 continue;
             }
 
@@ -309,11 +337,9 @@ int main(int argc, char *argv[]) {
             // Get ID(16 bits==unsigned short)
             unsigned short id = *(unsigned short *)responsePtr;
             responsePtr += 2;
-            // printf("\nResponse ID: %d\n", id);
 
             // Check if query ID is present in the query table
             if (query_table[id].valid == 0) {
-                printf("\nQuery ID not found in the query table!\n");
                 continue;
             }
 
@@ -322,11 +348,10 @@ int main(int argc, char *argv[]) {
             unsigned short messageType = (*(responsePtr) & 0x80) >> 7;
 
             if (messageType != 1) { // Not a response
-                printf("\nMessage type is not a Response!\n");
                 continue;
             }
 
-            printf("Query ID: %d\n", id);
+            printf("\nQuery ID: %d\n", id);
 
             // Get the number of responses(3 bits)
             unsigned short numResponses = (*(responsePtr) & 0x70) >> 4;
@@ -365,8 +390,10 @@ int main(int argc, char *argv[]) {
             query_table[id].valid = 0;
 
             // reset the timer
-            timer.tv_sec = 5;
+            timer.tv_sec = timeout;
             timer.tv_usec = 0;
         }
     }
+    close(sockfd);
+    return 0;
 }

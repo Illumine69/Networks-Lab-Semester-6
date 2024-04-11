@@ -16,7 +16,11 @@ File: simDNSServer.c
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <unistd.h>
+
+#define BUF_SIZE 1000
+const float p = 0.2;
 
 /*
 simDNS Query Packet
@@ -32,7 +36,24 @@ simDNS Response Packet
 4) Response Strings: Multiple of 33 bits
 */
 
-int main() {
+int dropmessage(float prob) {
+    srand((unsigned int)time(NULL));
+    float random = (float)rand() / (float)RAND_MAX;
+    if (random < prob) {
+        return 1;
+    }
+    return 0;
+}
+
+int main(int argc, char *argv[]) {
+
+    if (argc != 2) {
+        printf("Usage: %s <Client IP>\n", argv[0]);
+        exit(1);
+    }
+
+    in_addr_t client_ip = inet_addr(argv[1]);
+
     // Open a raw socket to capture all the packets till Ethernet (use ETH_P_ALL)
     int sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (sockfd < 0) {
@@ -40,22 +61,12 @@ int main() {
         exit(1);
     }
 
-    // // Bind the raw socket to the local IP address
-    // struct sockaddr_in source;
-
-    // source.sin_family = AF_INET;
-    // source.sin_port = htons(10000);
-    // source.sin_addr.s_addr = inet_addr("127.0.0.1");
-
-    // if (bind(sockfd, (struct sockaddr *)&source, sizeof(struct sockaddr_in)) < 0) {
-    //     perror("bind() failed");
-    //     exit(1);
-    // }
+    // Bind the raw socket
     struct sockaddr_ll sll;
     memset(&sll, 0, sizeof(struct sockaddr_ll));
     sll.sll_family = AF_PACKET;
     sll.sll_protocol = htons(ETH_P_ALL);
-    sll.sll_ifindex = if_nametoindex("eth0"); // replace "eth0" with your network interface name
+    sll.sll_ifindex = 0; // supports all interfaces
 
     if (bind(sockfd, (struct sockaddr *)&sll, sizeof(struct sockaddr_ll)) < 0) {
         perror("bind() failed");
@@ -63,30 +74,34 @@ int main() {
     }
 
     // Receive packets on the raw socket
-    char buffer[65536];
+    char buffer[BUF_SIZE];
     while (1) {
         struct sockaddr_in client;
         socklen_t client_len = sizeof(client);
-        int len = recvfrom(sockfd, buffer, 65536, 0, (struct sockaddr *)&client, &client_len);
+        int len = recvfrom(sockfd, buffer, BUF_SIZE, 0, (struct sockaddr *)&client, &client_len);
         if (len < 0) {
             perror("recv() failed");
             exit(1);
         }
 
-        // Extract the IP header from the received packet
-        struct iphdr *cli_ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
-
-        // Get the client IP details and store in s_addr
-        client.sin_addr.s_addr = cli_ip->saddr;
-
-        // Check the protocol field and drop if not 254
-        if (cli_ip->protocol != 254) {
-            // printf("Protocol is not 254!\n");
+        // Drop Message
+        if (dropmessage(p)) {
             continue;
         }
 
-        printf("Received a simDNS query from %s\n", inet_ntoa(client.sin_addr));
-        printf("clilen: %d\n", client_len);
+        // Extract the IP header from the received packet
+        struct iphdr *cli_ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
+
+        // Check the protocol field and drop if not 254
+        if (cli_ip->protocol != 254) {
+            continue;
+        }
+
+        // Only allow specied client IP
+        if (client_ip != cli_ip->saddr) {
+            continue;
+        }
+
 
         // Read the query header
         char *query = buffer + sizeof(struct ethhdr) + sizeof(struct iphdr);
@@ -100,35 +115,31 @@ int main() {
         unsigned short messageType = (*(query) & 0x80) >> 7;
 
         if (messageType != 0) { // Not a query
-            printf("Message type is not a Query!\n");
             continue;
         }
-        printf("Message type: %d\n", messageType);
 
         // Get Number of Queries(3 bits)
         unsigned short numQueries = (*(query) & 0x70) >> 4;
         numQueries++; // Num starts from 1 so 000 means 1 and so on...
-        printf("Number of Queries: %d\n", numQueries);
 
         // Get Query Strings (first 4 bytes is domain name size and then domain name)
         char *domain[numQueries];
         for (int i = 0; i < numQueries; i++) {
             // Get the size of the domain name
             int domainSize = ((*query & 0x0f) << 28) | ((*(query + 1)) << 20) | (*(query + 2) << 12) | ((*(query + 3) << 4)) | ((*(query + 4) & 0xf0) >> 4);
-            printf("Domain size: %d\n", domainSize);
+            
             // Get the domain name
             domain[i] = (char *)malloc((domainSize + 1) * sizeof(char));
             for (int j = 0; j < domainSize; j++) {
                 domain[i][j] = ((*(query + 4 + j) & 0x0f) << 4) | ((*(query + 5 + j) & 0xf0) >> 4);
             }
-            // domain[domainSize] = '\0';
-            printf("Domain: %s\n", domain[i]);
+            domain[domainSize] = '\0';
 
             query = query + 4 + domainSize;
         }
 
         // Generate the simDNS response
-        char response[65536];
+        char response[BUF_SIZE];
         char *responsePtr = response;
 
         // Set the ID (16 bits)
@@ -177,17 +188,8 @@ int main() {
             }
         }
 
-        // print the response
-        printf("Response: ");
-        for (int i = 0; i < responsePtr - response + 1; i++) {
-            for (int j = 7; j >= 0; j--) {
-                printf("%d", (response[i] & (1 << j)) >> j);
-            }
-            printf(" ");
-        }
-
         // set the IP header
-        char buffer[65536];
+        char buffer[BUF_SIZE];
         memset(buffer, 0, sizeof(buffer));
         struct iphdr *ip = (struct iphdr *)buffer;
 
@@ -196,12 +198,11 @@ int main() {
         ip->tos = 0;
         ip->tot_len = sizeof(struct iphdr) + (responsePtr - response + 1);
         ip->id = htons(12345);
-        // ip->frag_off = 0;
         ip->ttl = 64;
         ip->protocol = 254;
         ip->check = 0;
-        ip->saddr = inet_addr("127.0.0.1");
-        ip->daddr = client.sin_addr.s_addr;
+        ip->saddr = INADDR_ANY;
+        ip->daddr = client_ip;
 
         // Add the response to the buffer
         memcpy(buffer + sizeof(struct iphdr), response, responsePtr - response + 1);
@@ -231,5 +232,10 @@ int main() {
             perror("sendto() failed");
             exit(1);
         }
+
+        for(int i = 0; i < numQueries; i++) {
+            free(domain[i]);
+        }
+        close(respsockfd);
     }
 }
