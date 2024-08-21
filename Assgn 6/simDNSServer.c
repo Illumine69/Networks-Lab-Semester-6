@@ -20,7 +20,7 @@ File: simDNSServer.c
 #include <unistd.h>
 
 #define BUF_SIZE 1000
-const float p = 0.2;
+const float p = 0;
 
 /*
 simDNS Query Packet
